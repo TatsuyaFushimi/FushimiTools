@@ -1,4 +1,4 @@
-# YouTube Downloader
+# Flare Downloader
 
 YouTube動画をMP4でダウンロードできるローカルWebアプリ。
 

@@ -4,7 +4,7 @@
 
 ## 開発済み
 
-### YouTube Downloader
+### Flare Downloader
 - **概要**: YouTube URLを入力してMP4でダウンロードできるローカルWebアプリ
 - **AI必要**: なし
 - **フォルダ**: [./youtube-downloader/](./youtube-downloader/)
