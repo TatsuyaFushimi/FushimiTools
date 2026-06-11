@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>伏見ツール一覧</title>
+  <link rel="icon" href="fushimi-tools-icon.png">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -28,13 +29,13 @@
 
     .brand-icon {
       width: 44px; height: 44px;
-      background: linear-gradient(135deg, #111 0%, #444 100%);
       border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      color: #fff;
-      font-size: 20px;
-      font-weight: 800;
-      letter-spacing: -1px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .brand-icon img {
+      width: 100%; height: 100%; object-fit: cover;
     }
 
     h1 { font-size: 26px; font-weight: 700; }
@@ -102,7 +103,7 @@
 
   <header>
     <div class="brand">
-      <div class="brand-icon">F</div>
+      <div class="brand-icon"><img src="fushimi-tools-icon.png" alt="Fushimi Tools"></div>
       <h1>伏見ツール一覧</h1>
     </div>
     <p class="subtitle">社内で使えるツール・アプリをまとめています</p>
