@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FlareQR</title>
+  <title>Flare QR</title>
+  <link rel="icon" href="/static/icon.png">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -21,12 +22,9 @@
 
     .logo { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 6px; }
 
-    .logo-icon {
-      width: 44px; height: 44px;
-      background: #111;
-      border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 22px;
+    .logo-img {
+      width: 56px; height: 56px;
+      object-fit: contain;
     }
 
     .logo-name { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
@@ -252,8 +250,8 @@
 <div class="container">
   <header>
     <div class="logo">
-      <div class="logo-icon">⬛</div>
-      <span class="logo-name">FlareQR</span>
+      <img src="/static/icon.png" class="logo-img" alt="Flare QR">
+      <span class="logo-name">Flare QR</span>
     </div>
     <p class="subtitle">動的 QR コード — リンク先をあとから変更できます</p>
   </header>
