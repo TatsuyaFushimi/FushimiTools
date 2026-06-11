@@ -233,7 +233,7 @@
   <div class="card">
     <div class="input-row">
       <input type="text" id="url-input" placeholder="https://www.youtube.com/watch?v=...">
-      <button class="btn btn-red" id="fetch-btn" onclick="fetchInfo()">情報取得</button>
+      <button class="btn btn-red" id="fetch-btn" onclick="fetchInfo()" disabled>情報取得</button>
     </div>
     <div id="fetch-error" class="error-text hidden"></div>
   </div>
@@ -310,7 +310,7 @@
   let pollTimer = null;
 
   document.getElementById('url-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') fetchInfo();
+    if (e.key === 'Enter' && !document.getElementById('fetch-btn').disabled) fetchInfo();
   });
 
   async function fetchInfo() {
@@ -481,10 +481,13 @@
       badge.className = 'c-badge';
 
       const card = document.getElementById('cookie-card');
+      const fetchBtn = document.getElementById('fetch-btn');
       if (d.status === 'valid') {
         card.classList.add('hidden');
+        fetchBtn.disabled = false;
       } else {
         card.classList.remove('hidden');
+        fetchBtn.disabled = (d.status === 'expired' || d.status === 'none');
         if (d.status === 'expired') showBotAlert();
       }
     } catch {
