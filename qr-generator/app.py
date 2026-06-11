@@ -74,6 +74,20 @@ def redirect_qr(qr_id):
     return 'QRコードが見つかりません', 404
 
 
+@app.route('/api/qr/<qr_id>')
+def get_qr(qr_id):
+    if not supabase:
+        return jsonify({'error': 'サーバー設定エラー'}), 500
+    result = supabase.table('qr_codes').select('title').eq('id', qr_id).single().execute()
+    if not result.data:
+        return jsonify({'error': 'QRコードが見つかりません'}), 404
+    redirect_url = f'{APP_URL}/r/{qr_id}'
+    return jsonify({
+        'qr_image': _make_qr_b64(redirect_url),
+        'title': result.data['title'],
+    })
+
+
 @app.route('/api/create', methods=['POST'])
 def create_qr():
     if not supabase:
@@ -120,6 +134,7 @@ def create_qr():
     redirect_url = f'{APP_URL}/r/{qr_id}'
     return jsonify({
         'id': qr_id,
+        'title': title,
         'redirect_url': redirect_url,
         'qr_image': _make_qr_b64(redirect_url),
     })
