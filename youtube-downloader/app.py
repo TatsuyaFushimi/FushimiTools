@@ -10,6 +10,7 @@ app = Flask(__name__)
 jobs = {}
 
 COOKIES_PATH = '/tmp/yt_cookies.txt'
+_cookie_check_cache = {'valid': None, 'checked_at': 0}
 
 
 def _init_cookies():
@@ -212,6 +213,38 @@ def upload_cookies():
 @app.route('/api/cookies/status')
 def cookies_status():
     return jsonify({'has_cookies': os.path.exists(COOKIES_PATH)})
+
+
+@app.route('/api/cookies/check')
+def cookies_check():
+    import time, yt_dlp
+    cache = _cookie_check_cache
+
+    # 30分以内にチェック済みならキャッシュを返す（?refresh=1 で強制リフレッシュ）
+    force = request.args.get('refresh') == '1'
+    if not force and cache['valid'] is not None and time.time() - cache['checked_at'] < 1800:
+        return jsonify({'status': 'valid' if cache['valid'] else 'expired'})
+
+    if not os.path.exists(COOKIES_PATH):
+        return jsonify({'status': 'none'})
+
+    try:
+        opts = {**_ydl_opts_base(), 'quiet': True, 'no_warnings': True}
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            # 軽量テスト: 短い動画の情報だけ取得（ダウンロードなし）
+            ydl.extract_info(
+                'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+                download=False,
+                process=False,
+            )
+        cache['valid'] = True
+        cache['checked_at'] = time.time()
+        return jsonify({'status': 'valid'})
+    except Exception as e:
+        cache['valid'] = False
+        cache['checked_at'] = time.time()
+        status = 'expired' if _is_bot_error(str(e)) else 'error'
+        return jsonify({'status': status})
 
 
 @app.route('/api/status')

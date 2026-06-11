@@ -459,14 +459,31 @@
   // Cookie管理
   window.addEventListener('load', checkCookiesStatus);
 
-  async function checkCookiesStatus() {
+  async function checkCookiesStatus(refresh = false) {
+    const badge = document.getElementById('cookie-badge');
+    badge.textContent = '確認中...';
+    badge.className = 'c-badge';
+    badge.style.background = '#f0f0f0';
+    badge.style.color = '#888';
     try {
-      const res = await fetch('/api/cookies/status');
+      const res = await fetch('/api/cookies/check' + (refresh ? '?refresh=1' : ''));
       const d = await res.json();
-      const badge = document.getElementById('cookie-badge');
-      badge.textContent = d.has_cookies ? '設定済み' : '未設定';
-      badge.className = 'c-badge ' + (d.has_cookies ? 'ok' : 'ng');
-    } catch {}
+      const map = {
+        valid:   { text: '✅ 有効',    bg: '#e8f5e9', color: '#2e7d32' },
+        expired: { text: '⚠️ 期限切れ', bg: '#fff3e0', color: '#e65100' },
+        none:    { text: '未設定',     bg: '#fde0e0', color: '#c00'    },
+        error:   { text: '確認失敗',   bg: '#f0f0f0', color: '#888'    },
+      };
+      const s = map[d.status] || map.error;
+      badge.textContent = s.text;
+      badge.style.background = s.bg;
+      badge.style.color = s.color;
+      badge.className = 'c-badge';
+      if (d.status === 'expired') showBotAlert();
+    } catch {
+      badge.textContent = '確認失敗';
+      badge.className = 'c-badge';
+    }
   }
 
   async function uploadCookies(file) {
@@ -483,7 +500,7 @@
       if (d.ok) {
         msg.textContent = '✓ Cookieを設定しました。再度ダウンロードをお試しください。';
         msg.style.color = '#2e7d32';
-        checkCookiesStatus();
+        checkCookiesStatus(true);
       } else {
         msg.textContent = 'エラー: ' + (d.error || '不明');
         msg.style.color = '#c00';
