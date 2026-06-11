@@ -281,13 +281,23 @@
     </div>
     <p class="cookie-desc">
       YouTubeのBot判定を回避するためブラウザのCookieが必要です。<br>
-      <a href="https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc" target="_blank">Get cookies.txt LOCALLY</a>（Chrome拡張）をインストール →
-      YouTubeを開いた状態でエクスポート → 下にアップロード
+      ①スクリプトをダウンロード → ②ダブルクリックで実行 → 完了
     </p>
-    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('cookie-input').click()">
-      cookies.txt をドラッグ＆ドロップ、またはクリックして選択
-      <input type="file" id="cookie-input" accept=".txt" style="display:none" onchange="uploadCookies(this.files[0])">
-    </div>
+
+    <a class="btn btn-red" href="/api/cookie-updater" download style="display:block;text-align:center;text-decoration:none;margin-bottom:12px;">
+      ⬇ Cookie更新スクリプトをダウンロード（Mac用）
+    </a>
+
+    <details style="font-size:12px;color:#aaa;">
+      <summary style="cursor:pointer;">手動でアップロードする場合</summary>
+      <div style="margin-top:10px;">
+        <div class="drop-zone" id="drop-zone" onclick="document.getElementById('cookie-input').click()">
+          cookies.txt をドラッグ＆ドロップ、またはクリックして選択
+          <input type="file" id="cookie-input" accept=".txt" style="display:none" onchange="uploadCookies(this.files[0])">
+        </div>
+      </div>
+    </details>
+
     <div id="cookie-msg" class="cookie-msg hidden"></div>
   </div>
 

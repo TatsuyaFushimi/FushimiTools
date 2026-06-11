@@ -188,6 +188,12 @@ def serve_file(job_id):
     return send_file(filepath, as_attachment=True, download_name=job['filename'])
 
 
+@app.route('/api/cookie-updater')
+def cookie_updater():
+    path = os.path.join(os.path.dirname(__file__), 'update-cookies.command')
+    return send_file(path, as_attachment=True, download_name='update-cookies.command')
+
+
 @app.route('/api/cookies', methods=['POST'])
 def upload_cookies():
     if 'file' not in request.files:
