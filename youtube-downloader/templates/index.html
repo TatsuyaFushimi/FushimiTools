@@ -277,7 +277,7 @@
     </p>
 
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
-      <code id="cookie-cmd" style="flex:1;background:#f4f4f4;border-radius:8px;padding:10px 12px;font-size:12px;word-break:break-all;">bash &lt;(curl -s https://fushimitools-youtube.onrender.com/api/cookie-script)</code>
+      <code id="cookie-cmd" style="flex:1;background:#f4f4f4;border-radius:8px;padding:10px 12px;font-size:12px;word-break:break-all;"></code>
       <button class="btn btn-red" onclick="copyCmd()" id="copy-btn" style="white-space:nowrap;flex-shrink:0;">コピー</button>
     </div>
 
@@ -443,13 +443,16 @@
   }
 
   function copyCmd() {
-    const cmd = `bash <(curl -s https://fushimitools-youtube.onrender.com/api/cookie-script)`;
+    const cmd = `bash <(curl -s ${window.location.origin}/api/cookie-script)`;
     navigator.clipboard.writeText(cmd).then(() => {
       const btn = document.getElementById('copy-btn');
       btn.textContent = 'コピー済み！';
       setTimeout(() => btn.textContent = 'コピー', 2000);
     });
   }
+
+  document.getElementById('cookie-cmd').textContent =
+    `bash <(curl -s ${window.location.origin}/api/cookie-script)`;
 
   // Cookie管理
   window.addEventListener('load', checkCookiesStatus);
