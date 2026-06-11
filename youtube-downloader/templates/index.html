@@ -175,6 +175,29 @@
 
     .hidden { display: none !important; }
 
+    /* Cookie管理 */
+    .cookie-card { border: 2px solid #fff3cd; background: #fffbf0; }
+    .cookie-card.alert { border-color: #FF0000; animation: shake .35s; }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      25%      { transform: translateX(-5px); }
+      75%      { transform: translateX(5px); }
+    }
+    .cookie-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .cookie-title  { font-size: 14px; font-weight: 700; }
+    .c-badge       { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 99px; }
+    .c-badge.ok    { background: #e8f5e9; color: #2e7d32; }
+    .c-badge.ng    { background: #fde0e0; color: #c00; }
+    .cookie-desc   { font-size: 12px; color: #888; line-height: 1.7; margin-bottom: 12px; }
+    .cookie-desc a { color: #555; }
+    .drop-zone {
+      border: 2px dashed #ddd; border-radius: 9px; padding: 16px;
+      text-align: center; font-size: 13px; color: #aaa; cursor: pointer;
+      transition: border-color .15s, background .15s;
+    }
+    .drop-zone:hover, .drop-zone.drag-over { border-color: #FF0000; background: #fff5f5; color: #FF0000; }
+    .cookie-msg { font-size: 13px; margin-top: 10px; text-align: center; }
+
     .back-link {
       position: fixed;
       top: 16px; left: 16px;
@@ -250,6 +273,24 @@
     <div id="dl-error" class="error-text hidden"></div>
   </div>
 
+  <!-- Cookie管理 -->
+  <div class="card cookie-card" id="cookie-card">
+    <div class="cookie-header">
+      <span class="cookie-title">🍪 Cookie設定</span>
+      <span class="c-badge ng" id="cookie-badge">未設定</span>
+    </div>
+    <p class="cookie-desc">
+      YouTubeのBot判定を回避するためブラウザのCookieが必要です。<br>
+      <a href="https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc" target="_blank">Get cookies.txt LOCALLY</a>（Chrome拡張）をインストール →
+      YouTubeを開いた状態でエクスポート → 下にアップロード
+    </p>
+    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('cookie-input').click()">
+      cookies.txt をドラッグ＆ドロップ、またはクリックして選択
+      <input type="file" id="cookie-input" accept=".txt" style="display:none" onchange="uploadCookies(this.files[0])">
+    </div>
+    <div id="cookie-msg" class="cookie-msg hidden"></div>
+  </div>
+
 </div>
 
 <script>
@@ -280,6 +321,7 @@
         body: JSON.stringify({ url }),
       });
       const data = await res.json();
+      if (data.error === 'BOT_DETECTION') { setFetchError('YouTubeのBot判定に引っかかりました。下のCookie設定をしてください。'); showBotAlert(); return; }
       if (data.error) return setFetchError(data.error);
 
       currentUrl = url;
@@ -360,7 +402,8 @@
 
         } else if (d.status === 'error') {
           clearInterval(pollTimer);
-          setDlError('エラー: ' + d.error);
+          if (d.bot_error) { setDlError('YouTubeのBot判定に引っかかりました。下のCookie設定をしてください。'); showBotAlert(); }
+          else { setDlError('エラー: ' + d.error); }
           document.getElementById('progress-wrap').classList.add('hidden');
           btn.disabled = false;
           btn.textContent = 'ダウンロード';
@@ -391,6 +434,62 @@
     el.textContent = msg;
     el.classList.remove('hidden');
   }
+
+  // Cookie管理
+  window.addEventListener('load', checkCookiesStatus);
+
+  async function checkCookiesStatus() {
+    try {
+      const res = await fetch('/api/cookies/status');
+      const d = await res.json();
+      const badge = document.getElementById('cookie-badge');
+      badge.textContent = d.has_cookies ? '設定済み' : '未設定';
+      badge.className = 'c-badge ' + (d.has_cookies ? 'ok' : 'ng');
+    } catch {}
+  }
+
+  async function uploadCookies(file) {
+    if (!file) return;
+    const form = new FormData();
+    form.append('file', file);
+    const msg = document.getElementById('cookie-msg');
+    msg.textContent = 'アップロード中...';
+    msg.style.color = '#888';
+    msg.classList.remove('hidden');
+    try {
+      const res = await fetch('/api/cookies', { method: 'POST', body: form });
+      const d = await res.json();
+      if (d.ok) {
+        msg.textContent = '✓ Cookieを設定しました。再度ダウンロードをお試しください。';
+        msg.style.color = '#2e7d32';
+        checkCookiesStatus();
+      } else {
+        msg.textContent = 'エラー: ' + (d.error || '不明');
+        msg.style.color = '#c00';
+      }
+    } catch {
+      msg.textContent = '通信エラーが発生しました';
+      msg.style.color = '#c00';
+    }
+  }
+
+  function showBotAlert() {
+    const card = document.getElementById('cookie-card');
+    card.classList.add('alert');
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => card.classList.remove('alert'), 1000);
+  }
+
+  // ドラッグ&ドロップ
+  const dropZone = document.getElementById('drop-zone');
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) uploadCookies(file);
+  });
 </script>
 </body>
 </html>

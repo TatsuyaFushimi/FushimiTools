@@ -1,4 +1,5 @@
 import os
+import base64
 import shutil
 import tempfile
 import uuid
@@ -7,6 +8,34 @@ from flask import Flask, render_template, request, jsonify, send_file, after_thi
 
 app = Flask(__name__)
 jobs = {}
+
+COOKIES_PATH = '/tmp/yt_cookies.txt'
+
+
+def _init_cookies():
+    """環境変数にCookieが設定されていれば起動時にファイルへ書き出す"""
+    b64 = os.environ.get('YOUTUBE_COOKIES_B64', '')
+    if b64:
+        try:
+            with open(COOKIES_PATH, 'wb') as f:
+                f.write(base64.b64decode(b64))
+            print('YouTube cookies loaded from environment variable')
+        except Exception as e:
+            print(f'Failed to load cookies from env: {e}')
+
+
+_init_cookies()
+
+
+def _ydl_opts_base():
+    opts = {'quiet': True, 'no_warnings': True}
+    if os.path.exists(COOKIES_PATH):
+        opts['cookiefile'] = COOKIES_PATH
+    return opts
+
+
+def _is_bot_error(msg: str) -> bool:
+    return 'Sign in to confirm' in msg or 'bot' in msg.lower()
 
 
 @app.route('/')
@@ -22,7 +51,7 @@ def get_info():
         if not url:
             return jsonify({'error': 'URLを入力してください'}), 400
 
-        with yt_dlp.YoutubeDL({'quiet': True, 'no_warnings': True}) as ydl:
+        with yt_dlp.YoutubeDL(_ydl_opts_base()) as ydl:
             info = ydl.extract_info(url, download=False)
 
         resolutions = set()
@@ -44,7 +73,10 @@ def get_info():
         })
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        msg = str(e)
+        if _is_bot_error(msg):
+            return jsonify({'error': 'BOT_DETECTION', 'message': msg}), 400
+        return jsonify({'error': msg}), 400
 
 
 @app.route('/api/download', methods=['POST'])
@@ -89,12 +121,11 @@ def _do_download(job_id, url, height):
             jobs[job_id]['eta'] = 'マージ中...'
 
     opts = {
+        **_ydl_opts_base(),
         'format': fmt,
         'outtmpl': os.path.join(tmpdir, '%(title)s.%(ext)s'),
         'merge_output_format': 'mp4',
         'progress_hooks': [progress_hook],
-        'quiet': True,
-        'no_warnings': True,
     }
 
     try:
@@ -120,7 +151,12 @@ def _do_download(job_id, url, height):
         })
 
     except Exception as e:
-        jobs[job_id].update({'status': 'error', 'error': str(e)})
+        msg = str(e)
+        jobs[job_id].update({
+            'status': 'error',
+            'error': msg,
+            'bot_error': _is_bot_error(msg),
+        })
 
 
 @app.route('/api/progress/<job_id>')
@@ -152,6 +188,22 @@ def serve_file(job_id):
     return send_file(filepath, as_attachment=True, download_name=job['filename'])
 
 
+@app.route('/api/cookies', methods=['POST'])
+def upload_cookies():
+    if 'file' not in request.files:
+        return jsonify({'error': 'ファイルがありません'}), 400
+    f = request.files['file']
+    if not f.filename:
+        return jsonify({'error': 'ファイルが空です'}), 400
+    f.save(COOKIES_PATH)
+    return jsonify({'ok': True})
+
+
+@app.route('/api/cookies/status')
+def cookies_status():
+    return jsonify({'has_cookies': os.path.exists(COOKIES_PATH)})
+
+
 @app.route('/api/status')
 def status():
     total, used, free = shutil.disk_usage('/tmp')
@@ -164,7 +216,6 @@ def status():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    is_local = port == 5000
-    if is_local:
+    if port == 5000:
         print('起動中... ブラウザで http://localhost:5000 を開いてください')
     app.run(debug=False, host='0.0.0.0', port=port)
