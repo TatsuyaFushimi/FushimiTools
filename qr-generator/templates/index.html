@@ -15,7 +15,7 @@
       color: #111;
     }
 
-    .container { max-width: 760px; margin: 0 auto; }
+    .container { max-width: 820px; margin: 0 auto; }
 
     header { text-align: center; margin-bottom: 28px; }
 
@@ -54,18 +54,29 @@
     .field { margin-bottom: 12px; }
 
     .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
 
-    input[type=text], input[type=password], input[type=url] {
+    input[type=text], input[type=password], input[type=url], select {
       width: 100%;
       padding: 10px 13px;
       border: 1.5px solid #e0e0e0;
       border-radius: 10px;
       font-size: 14px;
       outline: none;
+      background: #fff;
       transition: border-color .15s;
+      appearance: none;
+      -webkit-appearance: none;
     }
 
-    input:focus { border-color: #111; }
+    select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 34px;
+    }
+
+    input:focus, select:focus { border-color: #111; }
 
     .btn {
       padding: 11px 20px;
@@ -106,9 +117,9 @@
       border-top: 1px solid #f0f0f0;
     }
 
-    .qr-result img { width: 120px; height: 120px; border-radius: 10px; border: 1px solid #eee; }
+    .qr-result img { width: 120px; height: 120px; border-radius: 10px; border: 1px solid #eee; flex-shrink: 0; }
 
-    .qr-info { flex: 1; }
+    .qr-info { flex: 1; min-width: 0; }
 
     .qr-id {
       display: inline-flex;
@@ -138,21 +149,25 @@
 
     .btn-row { display: flex; gap: 8px; }
 
-    /* 一覧 */
-    .search-wrap { position: relative; margin-bottom: 16px; }
-
-    .search-wrap input { padding-right: 14px; }
-
-    .search-wrap::before {
-      content: '🔍';
-      position: absolute;
-      left: 12px; top: 50%;
-      transform: translateY(-50%);
-      font-size: 14px;
+    /* 検索エリア */
+    .search-grid {
+      display: grid;
+      grid-template-columns: 200px 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
     }
 
-    .search-wrap input { padding-left: 36px; }
+    .search-grid select,
+    .search-grid input {
+      font-size: 13px;
+      padding: 9px 12px;
+    }
 
+    .search-grid select {
+      padding-right: 32px;
+    }
+
+    /* 一覧 */
     .qr-list { display: flex; flex-direction: column; gap: 8px; }
 
     .qr-item {
@@ -163,16 +178,28 @@
 
     .qr-item-row {
       display: grid;
-      grid-template-columns: 1fr 80px auto auto;
+      grid-template-columns: 130px 1fr 80px auto auto;
       align-items: center;
       gap: 12px;
       padding: 12px 16px;
       background: #fff;
     }
 
+    .item-channel {
+      font-size: 12px;
+      font-weight: 600;
+      color: #fff;
+      background: #444;
+      border-radius: 6px;
+      padding: 3px 8px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
     .item-title { font-size: 14px; font-weight: 700; }
-    .item-url { font-size: 11px; color: #aaa; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .item-creator { font-size: 12px; color: #666; }
+    .item-url { font-size: 11px; color: #aaa; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px; }
+    .item-creator { font-size: 12px; color: #666; white-space: nowrap; }
     .item-id { font-size: 11px; color: #bbb; font-family: monospace; }
 
     /* 編集パネル */
@@ -209,11 +236,12 @@
 
     .back-link:hover { color: #111; }
 
-    @media (max-width: 600px) {
+    @media (max-width: 640px) {
       .qr-item-row { grid-template-columns: 1fr auto; }
-      .item-creator, .item-id { display: none; }
+      .item-channel, .item-creator, .item-id { display: none; }
       .edit-panel-inner { grid-template-columns: 1fr; }
-      .row-2 { grid-template-columns: 1fr; }
+      .row-2, .row-3 { grid-template-columns: 1fr; }
+      .search-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -235,12 +263,43 @@
     <div class="card-title">新しいQRを作成</div>
 
     <div class="field">
-      <label>タイトル</label>
-      <input type="text" id="c-title" placeholder="例: 会社紹介ページ用QR">
+      <label>ch名</label>
+      <select id="c-channel" onchange="onChannelChange()">
+        <option value="">— ch名を選択 —</option>
+        <option>船原ch</option>
+        <option>萬田ch</option>
+        <option>尾藤ch</option>
+        <option>朝野ch</option>
+        <option>松永ch</option>
+        <option>成田ch</option>
+        <option>アズch</option>
+        <option>Yoshi ch</option>
+        <option>HIRAI ch</option>
+        <option>神岡ch</option>
+        <option>BIG神田ch</option>
+        <option>船原サブch</option>
+        <option>欲望夢 ch</option>
+        <option>メルカリママ ch</option>
+        <option>実践者対談 ch</option>
+        <option>Amazon輸出 ch</option>
+        <option>その他</option>
+      </select>
     </div>
-    <div class="field">
-      <label>遷移先 URL</label>
-      <input type="url" id="c-url" placeholder="https://example.com">
+
+    <div class="field hidden" id="channel-custom-wrap">
+      <label>ch名（手入力）</label>
+      <input type="text" id="c-channel-custom" placeholder="ch名を入力">
+    </div>
+
+    <div class="row-2">
+      <div class="field">
+        <label>タイトル</label>
+        <input type="text" id="c-title" placeholder="例: 会社紹介ページ用QR">
+      </div>
+      <div class="field">
+        <label>遷移先 URL</label>
+        <input type="url" id="c-url" placeholder="https://example.com">
+      </div>
     </div>
     <div class="row-2">
       <div class="field">
@@ -274,8 +333,29 @@
   <!-- 一覧 -->
   <div class="card">
     <div class="card-title">作成済みQR一覧</div>
-    <div class="search-wrap">
-      <input type="text" id="search-input" placeholder="タイトル・作成者で絞り込み" oninput="filterList()">
+    <div class="search-grid">
+      <select id="s-channel" onchange="filterList()">
+        <option value="">すべてのch</option>
+        <option>船原ch</option>
+        <option>萬田ch</option>
+        <option>尾藤ch</option>
+        <option>朝野ch</option>
+        <option>松永ch</option>
+        <option>成田ch</option>
+        <option>アズch</option>
+        <option>Yoshi ch</option>
+        <option>HIRAI ch</option>
+        <option>神岡ch</option>
+        <option>BIG神田ch</option>
+        <option>船原サブch</option>
+        <option>欲望夢 ch</option>
+        <option>メルカリママ ch</option>
+        <option>実践者対談 ch</option>
+        <option>Amazon輸出 ch</option>
+        <option>その他</option>
+      </select>
+      <input type="text" id="s-title" placeholder="タイトルで絞り込み" oninput="filterList()">
+      <input type="text" id="s-creator" placeholder="作成者で絞り込み" oninput="filterList()">
     </div>
     <div class="qr-list" id="qr-list">
       <div class="empty-state">読み込み中...</div>
@@ -284,11 +364,16 @@
 </div>
 
 <script>
+  const CHANNELS = [
+    '船原ch','萬田ch','尾藤ch','朝野ch','松永ch','成田ch','アズch',
+    'Yoshi ch','HIRAI ch','神岡ch','BIG神田ch','船原サブch',
+    '欲望夢 ch','メルカリママ ch','実践者対談 ch','Amazon輸出 ch','その他'
+  ];
+
   let allItems = [];
   let currentQrB64 = '';
   let currentId = '';
 
-  // ---- 起動時に一覧取得 ----
   loadList();
 
   async function loadList() {
@@ -302,11 +387,34 @@
     }
   }
 
+  function onChannelChange() {
+    const val = document.getElementById('c-channel').value;
+    const wrap = document.getElementById('channel-custom-wrap');
+    if (val === 'その他') {
+      wrap.classList.remove('hidden');
+    } else {
+      wrap.classList.add('hidden');
+      document.getElementById('c-channel-custom').value = '';
+    }
+  }
+
+  function getSelectedChannel() {
+    const sel = document.getElementById('c-channel').value;
+    if (sel === 'その他') return document.getElementById('c-channel-custom').value.trim();
+    return sel;
+  }
+
   function filterList() {
-    const q = document.getElementById('search-input').value.trim().toLowerCase();
-    const filtered = q
-      ? allItems.filter(r => r.title.toLowerCase().includes(q) || r.creator.toLowerCase().includes(q))
-      : allItems;
+    const ch = document.getElementById('s-channel').value;
+    const title = document.getElementById('s-title').value.trim().toLowerCase();
+    const creator = document.getElementById('s-creator').value.trim().toLowerCase();
+
+    const filtered = allItems.filter(r => {
+      if (ch && r.channel_name !== ch) return false;
+      if (title && !(r.title || '').toLowerCase().includes(title)) return false;
+      if (creator && !(r.creator || '').toLowerCase().includes(creator)) return false;
+      return true;
+    });
     renderList(filtered);
   }
 
@@ -319,6 +427,7 @@
     el.innerHTML = items.map(r => `
       <div class="qr-item" id="item-${r.id}">
         <div class="qr-item-row">
+          <span class="item-channel">${escHtml(r.channel_name || '—')}</span>
           <div>
             <div class="item-title">${escHtml(r.title)}</div>
             <div class="item-url">${escHtml(r.destination_url)}</div>
@@ -346,8 +455,7 @@
   }
 
   function toggleEdit(id) {
-    const panel = document.getElementById('edit-' + id);
-    panel.classList.toggle('open');
+    document.getElementById('edit-' + id).classList.toggle('open');
   }
 
   async function saveEdit(id) {
@@ -368,7 +476,6 @@
       if (d.ok) {
         msg.classList.add('msg-ok');
         msg.textContent = '✓ 変更しました！QRコードはそのまま使えます。';
-        // ローカルデータも更新
         const item = allItems.find(r => r.id === id);
         if (item) item.destination_url = new_url;
         document.querySelector(`#item-${id} .item-url`).textContent = new_url;
@@ -384,8 +491,8 @@
     }
   }
 
-  // ---- 作成 ----
   async function createQR() {
+    const channel_name = getSelectedChannel();
     const title   = document.getElementById('c-title').value.trim();
     const url     = document.getElementById('c-url').value.trim();
     const password = document.getElementById('c-pw').value.trim();
@@ -399,7 +506,7 @@
       const res = await fetch('/api/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, url, password, creator }),
+        body: JSON.stringify({ channel_name, title, url, password, creator }),
       });
       const d = await res.json();
       if (d.error) { alert(d.error); return; }
@@ -412,9 +519,11 @@
       document.getElementById('qr-url-display').textContent = d.redirect_url;
       document.getElementById('create-result').classList.remove('hidden');
       document.getElementById('create-btn').classList.add('hidden');
-      ['c-title','c-url','c-pw','c-creator'].forEach(id => document.getElementById(id).disabled = true);
+      ['c-channel','c-title','c-url','c-pw','c-creator','c-channel-custom'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.disabled = true;
+      });
 
-      // 一覧を再取得
       loadList();
     } catch {
       alert('通信エラーが発生しました');
@@ -439,10 +548,11 @@
   }
 
   function resetCreate() {
-    ['c-title','c-url','c-pw','c-creator'].forEach(id => {
-      document.getElementById(id).value = '';
-      document.getElementById(id).disabled = false;
+    ['c-channel','c-title','c-url','c-pw','c-creator','c-channel-custom'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.value = ''; el.disabled = false; }
     });
+    document.getElementById('channel-custom-wrap').classList.add('hidden');
     document.getElementById('create-result').classList.add('hidden');
     document.getElementById('create-btn').classList.remove('hidden');
     currentQrB64 = '';

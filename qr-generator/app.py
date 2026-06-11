@@ -21,7 +21,7 @@ GSHEET_ID = os.environ.get('GSHEET_ID', '')
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL else None
 
 
-def _log_to_sheet(title: str, url: str, password: str, creator: str, qr_id: str):
+def _log_to_sheet(channel_name: str, title: str, url: str, password: str, creator: str, qr_id: str):
     if not GSHEET_CREDS_B64 or not GSHEET_ID:
         return
     try:
@@ -34,7 +34,7 @@ def _log_to_sheet(title: str, url: str, password: str, creator: str, qr_id: str)
         sh = gc.open_by_key(GSHEET_ID)
         ws = sh.sheet1
         now = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
-        ws.append_row([now, title, url, password, creator, qr_id])
+        ws.append_row([channel_name, now, title, url, password, creator, qr_id])
     except Exception:
         pass  # サイレント失敗
 
@@ -80,11 +80,14 @@ def create_qr():
         return jsonify({'error': 'サーバー設定エラー'}), 500
 
     data = request.json or {}
+    channel_name = data.get('channel_name', '').strip()
     title = data.get('title', '').strip()
     url = data.get('url', '').strip()
     password = data.get('password', '').strip()
     creator = data.get('creator', '').strip()
 
+    if not channel_name:
+        return jsonify({'error': 'ch名を選択してください'}), 400
     if not title:
         return jsonify({'error': 'タイトルを入力してください'}), 400
     if not url:
@@ -105,13 +108,14 @@ def create_qr():
     pw_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
     supabase.table('qr_codes').insert({
         'id': qr_id,
+        'channel_name': channel_name,
         'title': title,
         'destination_url': url,
         'password_hash': pw_hash,
         'creator': creator,
     }).execute()
 
-    _log_to_sheet(title, url, password, creator, qr_id)
+    _log_to_sheet(channel_name, title, url, password, creator, qr_id)
 
     redirect_url = f'{APP_URL}/r/{qr_id}'
     return jsonify({
@@ -126,28 +130,10 @@ def list_qr():
     if not supabase:
         return jsonify({'error': 'サーバー設定エラー'}), 500
     try:
-        rows = supabase.table('qr_codes').select('id,title,creator,destination_url,created_at').order('created_at', desc=True).execute()
+        rows = supabase.table('qr_codes').select(
+            'id,channel_name,title,creator,destination_url,created_at'
+        ).order('created_at', desc=True).execute()
         return jsonify({'items': rows.data})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/api/search')
-def search_qr():
-    q = request.args.get('q', '').strip().lower()
-    if not q:
-        return jsonify({'results': []})
-    if not supabase:
-        return jsonify({'error': 'サーバー設定エラー'}), 500
-
-    try:
-        rows = supabase.table('qr_codes').select('id,title,creator,destination_url').execute()
-        results = [
-            {'id': r['id'], 'title': r['title'], 'creator': r['creator'], 'url': r['destination_url']}
-            for r in rows.data
-            if q in r.get('title', '').lower() or q in r.get('creator', '').lower()
-        ]
-        return jsonify({'results': results})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
