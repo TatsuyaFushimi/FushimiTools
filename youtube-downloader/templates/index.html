@@ -274,7 +274,7 @@
   </div>
 
   <!-- Cookie管理 -->
-  <div class="card cookie-card" id="cookie-card">
+  <div class="card cookie-card hidden" id="cookie-card">
     <div class="cookie-header">
       <span class="cookie-title">🍪 Cookie設定</span>
       <span class="c-badge ng" id="cookie-badge">未設定</span>
@@ -479,7 +479,14 @@
       badge.style.background = s.bg;
       badge.style.color = s.color;
       badge.className = 'c-badge';
-      if (d.status === 'expired') showBotAlert();
+
+      const card = document.getElementById('cookie-card');
+      if (d.status === 'valid') {
+        card.classList.add('hidden');
+      } else {
+        card.classList.remove('hidden');
+        if (d.status === 'expired') showBotAlert();
+      }
     } catch {
       badge.textContent = '確認失敗';
       badge.className = 'c-badge';
