@@ -139,5 +139,8 @@ def serve_file(job_id):
 
 
 if __name__ == '__main__':
-    print('起動中... ブラウザで http://localhost:5000 を開いてください')
-    app.run(debug=False, host='127.0.0.1', port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    is_local = port == 5000
+    if is_local:
+        print('起動中... ブラウザで http://localhost:5000 を開いてください')
+    app.run(debug=False, host='0.0.0.0', port=port)

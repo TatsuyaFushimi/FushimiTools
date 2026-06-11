@@ -1,0 +1,8 @@
+services:
+  - type: web
+    name: fushimitools-youtube
+    runtime: python
+    rootDir: youtube-downloader
+    buildCommand: pip install -r requirements.txt
+    startCommand: pip install -U yt-dlp && python app.py
+    plan: free
