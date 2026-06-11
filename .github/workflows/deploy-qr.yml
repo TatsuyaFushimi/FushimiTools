@@ -1,10 +1,10 @@
-name: Deploy Flare Downloader to Render
+name: Deploy QR Generator to Render
 
 on:
   push:
     branches: [main]
     paths:
-      - 'youtube-downloader/**'
+      - 'qr-generator/**'
 
 jobs:
   deploy:
@@ -15,4 +15,4 @@ jobs:
           curl -s -X POST \
             -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
             -H "Content-Type: application/json" \
-            https://api.render.com/v1/services/srv-d8l3bt9o3t8c73ajjgig/deploys
+            https://api.render.com/v1/services/srv-d8l6cjreo5us73b51jf0/deploys
