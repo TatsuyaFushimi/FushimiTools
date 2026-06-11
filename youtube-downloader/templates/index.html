@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Flare Downloader</title>
+  <link rel="icon" href="/static/icon.png">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -28,19 +29,9 @@
       margin-bottom: 6px;
     }
 
-    .yt-icon {
-      width: 38px; height: 27px;
-      background: #FF0000;
-      border-radius: 7px;
-      display: flex; align-items: center; justify-content: center;
-    }
-
-    .yt-icon::after {
-      content: '';
-      border: solid transparent;
-      border-width: 7px 0 7px 13px;
-      border-left-color: #fff;
-      margin-left: 3px;
+    .logo-img {
+      width: 44px; height: 44px;
+      object-fit: contain;
     }
 
     h1 { font-size: 22px; font-weight: 700; color: #111; }
@@ -223,7 +214,7 @@
 
   <header>
     <div class="logo">
-      <div class="yt-icon"></div>
+      <img src="/static/icon.png" class="logo-img" alt="Flare">
       <h1>Flare Downloader</h1>
     </div>
     <p class="subtitle">URLを貼り付けて MP4 でダウンロード</p>
