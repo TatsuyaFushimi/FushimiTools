@@ -101,13 +101,12 @@ def _do_download(job_id, url, height):
     tmpdir = tempfile.mkdtemp()
 
     if not height or height == 'best':
-        fmt = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best[ext=mp4]/best'
+        fmt = 'bestvideo+bestaudio/best'
     else:
         fmt = (
-            f'bestvideo[height<={height}][ext=mp4]+bestaudio[ext=m4a]/'
             f'bestvideo[height<={height}]+bestaudio/'
-            f'best[height<={height}][ext=mp4]/'
-            f'best[height<={height}]'
+            f'best[height<={height}]/'
+            f'best'
         )
 
     def progress_hook(d):
