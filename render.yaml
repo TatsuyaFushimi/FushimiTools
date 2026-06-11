@@ -6,3 +6,18 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: pip install -U yt-dlp && python app.py
     plan: free
+
+  - type: web
+    name: fushimitools-qr
+    runtime: python
+    rootDir: qr-generator
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app.py
+    plan: free
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: APP_URL
+        sync: false

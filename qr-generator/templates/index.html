@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Generator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+      background: #f4f4f4;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .container { width: 100%; max-width: 520px; }
+
+    header { text-align: center; margin-bottom: 28px; }
+
+    .logo { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+
+    .logo-icon {
+      width: 44px; height: 44px;
+      background: #111;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+    }
+
+    .logo-name { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+
+    .subtitle { font-size: 13px; color: #888; }
+
+    .card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 28px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.08);
+    }
+
+    .tabs {
+      display: flex;
+      background: #f0f0f0;
+      border-radius: 10px;
+      padding: 3px;
+      margin-bottom: 24px;
+    }
+
+    .tab {
+      flex: 1;
+      text-align: center;
+      padding: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      color: #888;
+      transition: background .15s, color .15s;
+    }
+
+    .tab.active { background: #fff; color: #111; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #333; }
+
+    input[type=text], input[type=password], input[type=url] {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 14px;
+      margin-bottom: 14px;
+      outline: none;
+      transition: border-color .15s;
+    }
+
+    input:focus { border-color: #111; }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .15s, opacity .15s;
+    }
+
+    .btn-dark { background: #111; color: #fff; }
+    .btn-dark:hover { background: #333; }
+    .btn-dark:disabled { background: #ccc; cursor: not-allowed; }
+
+    .btn-outline {
+      background: #fff;
+      color: #111;
+      border: 1.5px solid #ddd;
+      margin-top: 8px;
+    }
+
+    .btn-outline:hover { background: #f4f4f4; }
+
+    .result { margin-top: 20px; text-align: center; }
+
+    .qr-wrap {
+      background: #fafafa;
+      border: 1.5px solid #eee;
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 14px;
+      display: inline-block;
+    }
+
+    .qr-wrap img { display: block; width: 200px; height: 200px; }
+
+    .redirect-url {
+      font-size: 12px;
+      color: #888;
+      background: #f4f4f4;
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-bottom: 10px;
+      word-break: break-all;
+      text-align: left;
+    }
+
+    .id-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #f0f0f0;
+      border-radius: 8px;
+      padding: 7px 12px;
+      font-size: 13px;
+      margin-bottom: 14px;
+    }
+
+    .id-badge strong { font-family: monospace; font-size: 15px; letter-spacing: 1px; }
+
+    .copy-btn {
+      font-size: 11px;
+      padding: 3px 8px;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .copy-btn:active { background: #e8f5e9; }
+
+    .msg { font-size: 13px; padding: 10px 14px; border-radius: 8px; margin-top: 14px; }
+    .msg-ok  { background: #e8f5e9; color: #2e7d32; }
+    .msg-err { background: #fde0e0; color: #c00; }
+
+    .hidden { display: none !important; }
+
+    .back-link {
+      position: fixed;
+      top: 16px; left: 16px;
+      font-size: 13px;
+      color: #888;
+      text-decoration: none;
+      background: rgba(255,255,255,.9);
+      padding: 6px 12px;
+      border-radius: 20px;
+      backdrop-filter: blur(4px);
+      box-shadow: 0 1px 6px rgba(0,0,0,.1);
+      transition: color .15s;
+    }
+
+    .back-link:hover { color: #111; }
+
+    .note { font-size: 12px; color: #aaa; margin-top: -8px; margin-bottom: 14px; }
+  </style>
+</head>
+<body>
+
+<a class="back-link" href="https://TatsuyaFushimi.github.io/FushimiTools/" target="_blank">← ツール一覧</a>
+
+<div class="container">
+  <header>
+    <div class="logo">
+      <div class="logo-icon">⬛</div>
+      <span class="logo-name">QR Generator</span>
+    </div>
+    <p class="subtitle">動的 QR コード — リンク先をあとから変更できます</p>
+  </header>
+
+  <div class="card">
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('create')">作成</div>
+      <div class="tab" onclick="switchTab('edit')">編集</div>
+    </div>
+
+    <!-- 作成パネル -->
+    <div class="panel active" id="panel-create">
+      <label>遷移先 URL</label>
+      <input type="url" id="create-url" placeholder="https://example.com">
+
+      <label>管理パスワード</label>
+      <input type="password" id="create-pw" placeholder="あとで編集に使います">
+      <p class="note">※ このパスワードは編集時に必要です。メモしておいてください。</p>
+
+      <button class="btn btn-dark" id="create-btn" onclick="createQR()">QR コードを生成</button>
+
+      <div class="result hidden" id="create-result">
+        <div class="qr-wrap">
+          <img id="qr-img" src="" alt="QR Code">
+        </div>
+
+        <div class="id-badge">
+          管理ID: <strong id="qr-id-display"></strong>
+          <button class="copy-btn" onclick="copyId()">コピー</button>
+        </div>
+
+        <div class="redirect-url" id="redirect-url-display"></div>
+
+        <button class="btn btn-dark" onclick="downloadQR()">QR コードをダウンロード</button>
+        <button class="btn btn-outline" onclick="resetCreate()">新しく作る</button>
+      </div>
+    </div>
+
+    <!-- 編集パネル -->
+    <div class="panel" id="panel-edit">
+      <label>管理ID</label>
+      <input type="text" id="edit-id" placeholder="例: abc123">
+
+      <label>パスワード</label>
+      <input type="password" id="edit-pw" placeholder="作成時に設定したパスワード">
+
+      <label>新しい遷移先 URL</label>
+      <input type="url" id="edit-url" placeholder="https://new-destination.com">
+
+      <button class="btn btn-dark" id="edit-btn" onclick="editQR()">変更を保存</button>
+
+      <div class="msg hidden" id="edit-msg"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentQrB64 = '';
+  let currentId = '';
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach((t, i) => {
+      t.classList.toggle('active', (tab === 'create' && i === 0) || (tab === 'edit' && i === 1));
+    });
+    document.getElementById('panel-create').classList.toggle('active', tab === 'create');
+    document.getElementById('panel-edit').classList.toggle('active', tab === 'edit');
+  }
+
+  async function createQR() {
+    const url = document.getElementById('create-url').value.trim();
+    const password = document.getElementById('create-pw').value.trim();
+    const btn = document.getElementById('create-btn');
+
+    btn.disabled = true;
+    btn.textContent = '生成中...';
+
+    try {
+      const res = await fetch('/api/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, password }),
+      });
+      const d = await res.json();
+
+      if (d.error) {
+        alert(d.error);
+        return;
+      }
+
+      currentQrB64 = d.qr_image;
+      currentId = d.id;
+
+      document.getElementById('qr-img').src = 'data:image/png;base64,' + d.qr_image;
+      document.getElementById('qr-id-display').textContent = d.id;
+      document.getElementById('redirect-url-display').textContent = d.redirect_url;
+      document.getElementById('create-result').classList.remove('hidden');
+      document.getElementById('create-btn').classList.add('hidden');
+      document.getElementById('create-url').disabled = true;
+      document.getElementById('create-pw').disabled = true;
+
+    } catch {
+      alert('通信エラーが発生しました');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'QR コードを生成';
+    }
+  }
+
+  function downloadQR() {
+    const a = document.createElement('a');
+    a.href = 'data:image/png;base64,' + currentQrB64;
+    a.download = `qr-${currentId}.png`;
+    a.click();
+  }
+
+  function copyId() {
+    navigator.clipboard.writeText(currentId);
+    const btn = event.target;
+    btn.textContent = 'コピー済！';
+    setTimeout(() => btn.textContent = 'コピー', 1500);
+  }
+
+  function resetCreate() {
+    document.getElementById('create-url').value = '';
+    document.getElementById('create-url').disabled = false;
+    document.getElementById('create-pw').value = '';
+    document.getElementById('create-pw').disabled = false;
+    document.getElementById('create-result').classList.add('hidden');
+    document.getElementById('create-btn').classList.remove('hidden');
+    currentQrB64 = '';
+    currentId = '';
+  }
+
+  async function editQR() {
+    const id = document.getElementById('edit-id').value.trim();
+    const password = document.getElementById('edit-pw').value.trim();
+    const new_url = document.getElementById('edit-url').value.trim();
+    const btn = document.getElementById('edit-btn');
+    const msg = document.getElementById('edit-msg');
+
+    msg.classList.add('hidden');
+    btn.disabled = true;
+    btn.textContent = '保存中...';
+
+    try {
+      const res = await fetch('/api/edit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, password, new_url }),
+      });
+      const d = await res.json();
+
+      msg.classList.remove('hidden', 'msg-ok', 'msg-err');
+      if (d.ok) {
+        msg.classList.add('msg-ok');
+        msg.textContent = '✓ 変更を保存しました！QR コードはそのまま使えます。';
+        document.getElementById('edit-url').value = '';
+      } else {
+        msg.classList.add('msg-err');
+        msg.textContent = d.error || 'エラーが発生しました';
+      }
+    } catch {
+      msg.classList.remove('hidden');
+      msg.classList.add('msg-err');
+      msg.textContent = '通信エラーが発生しました';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '変更を保存';
+    }
+  }
+</script>
+</body>
+</html>
