@@ -3,3 +3,5 @@ supabase
 qrcode[pil]
 bcrypt
 gunicorn
+gspread
+google-auth

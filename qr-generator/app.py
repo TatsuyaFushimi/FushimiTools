@@ -1,8 +1,10 @@
 import os
 import io
+import json
 import base64
 import secrets
 import string
+from datetime import datetime, timezone
 from flask import Flask, render_template, request, jsonify, redirect
 import qrcode
 import bcrypt
@@ -13,8 +15,28 @@ app = Flask(__name__)
 SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
 SUPABASE_KEY = os.environ.get('SUPABASE_KEY', '')
 APP_URL = os.environ.get('APP_URL', 'http://localhost:5000').rstrip('/')
+GSHEET_CREDS_B64 = os.environ.get('GSHEET_CREDS_B64', '')
+GSHEET_ID = os.environ.get('GSHEET_ID', '')
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL else None
+
+
+def _log_to_sheet(title: str, url: str, password: str, creator: str, qr_id: str):
+    if not GSHEET_CREDS_B64 or not GSHEET_ID:
+        return
+    try:
+        import gspread
+        from google.oauth2.service_account import Credentials
+        creds_json = json.loads(base64.b64decode(GSHEET_CREDS_B64).decode())
+        scopes = ['https://www.googleapis.com/auth/spreadsheets']
+        creds = Credentials.from_service_account_info(creds_json, scopes=scopes)
+        gc = gspread.authorize(creds)
+        sh = gc.open_by_key(GSHEET_ID)
+        ws = sh.sheet1
+        now = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+        ws.append_row([now, title, url, password, creator, qr_id])
+    except Exception:
+        pass  # サイレント失敗
 
 
 def _gen_id(length=6):
@@ -89,12 +111,25 @@ def create_qr():
         'creator': creator,
     }).execute()
 
+    _log_to_sheet(title, url, password, creator, qr_id)
+
     redirect_url = f'{APP_URL}/r/{qr_id}'
     return jsonify({
         'id': qr_id,
         'redirect_url': redirect_url,
         'qr_image': _make_qr_b64(redirect_url),
     })
+
+
+@app.route('/api/list')
+def list_qr():
+    if not supabase:
+        return jsonify({'error': 'サーバー設定エラー'}), 500
+    try:
+        rows = supabase.table('qr_codes').select('id,title,creator,destination_url,created_at').order('created_at', desc=True).execute()
+        return jsonify({'items': rows.data})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/search')
