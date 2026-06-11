@@ -69,13 +69,16 @@
 
     label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #333; }
 
+    .input-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    .field { margin-bottom: 14px; }
+
     input[type=text], input[type=password], input[type=url] {
       width: 100%;
       padding: 11px 14px;
       border: 1.5px solid #e0e0e0;
       border-radius: 10px;
       font-size: 14px;
-      margin-bottom: 14px;
       outline: none;
       transition: border-color .15s;
     }
@@ -90,7 +93,7 @@
       font-size: 14px;
       font-weight: 700;
       cursor: pointer;
-      transition: background .15s, opacity .15s;
+      transition: background .15s;
     }
 
     .btn-dark { background: #111; color: #fff; }
@@ -153,7 +156,77 @@
       font-weight: 600;
     }
 
-    .copy-btn:active { background: #e8f5e9; }
+    /* 検索 */
+    .search-wrap { position: relative; margin-bottom: 6px; }
+
+    .search-wrap input { padding-right: 80px; }
+
+    .search-btn {
+      position: absolute;
+      right: 6px; top: 50%;
+      transform: translateY(-50%);
+      padding: 6px 12px;
+      background: #111;
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .search-results {
+      border: 1.5px solid #e0e0e0;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+
+    .search-result-item {
+      padding: 10px 14px;
+      cursor: pointer;
+      border-bottom: 1px solid #f0f0f0;
+      transition: background .1s;
+    }
+
+    .search-result-item:last-child { border-bottom: none; }
+    .search-result-item:hover { background: #f8f8f8; }
+
+    .result-title { font-size: 13px; font-weight: 700; }
+    .result-meta { font-size: 11px; color: #888; margin-top: 2px; }
+
+    .search-empty { padding: 12px 14px; font-size: 13px; color: #aaa; text-align: center; }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      color: #bbb;
+      font-size: 12px;
+    }
+
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #eee;
+    }
+
+    .selected-badge {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #e8f5e9;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 13px;
+      margin-bottom: 14px;
+    }
+
+    .selected-badge strong { color: #2e7d32; }
+
+    .clear-btn { font-size: 12px; color: #888; cursor: pointer; background: none; border: none; }
 
     .msg { font-size: 13px; padding: 10px 14px; border-radius: 8px; margin-top: 14px; }
     .msg-ok  { background: #e8f5e9; color: #2e7d32; }
@@ -177,7 +250,7 @@
 
     .back-link:hover { color: #111; }
 
-    .note { font-size: 12px; color: #aaa; margin-top: -8px; margin-bottom: 14px; }
+    .note { font-size: 12px; color: #aaa; margin-top: -10px; margin-bottom: 14px; }
   </style>
 </head>
 <body>
@@ -201,12 +274,27 @@
 
     <!-- 作成パネル -->
     <div class="panel active" id="panel-create">
-      <label>遷移先 URL</label>
-      <input type="url" id="create-url" placeholder="https://example.com">
+      <div class="field">
+        <label>タイトル</label>
+        <input type="text" id="create-title" placeholder="例: 会社紹介ページ用QR">
+      </div>
 
-      <label>管理パスワード</label>
-      <input type="password" id="create-pw" placeholder="あとで編集に使います">
-      <p class="note">※ このパスワードは編集時に必要です。メモしておいてください。</p>
+      <div class="field">
+        <label>遷移先 URL</label>
+        <input type="url" id="create-url" placeholder="https://example.com">
+      </div>
+
+      <div class="input-row-2">
+        <div class="field">
+          <label>パスワード</label>
+          <input type="password" id="create-pw" placeholder="編集時に使用">
+        </div>
+        <div class="field">
+          <label>作成者名</label>
+          <input type="text" id="create-creator" placeholder="例: 伏見">
+        </div>
+      </div>
+      <p class="note">※ パスワードはメモしておいてください。スプレッドシートにも記録されます。</p>
 
       <button class="btn btn-dark" id="create-btn" onclick="createQR()">QR コードを生成</button>
 
@@ -214,14 +302,11 @@
         <div class="qr-wrap">
           <img id="qr-img" src="" alt="QR Code">
         </div>
-
         <div class="id-badge">
           管理ID: <strong id="qr-id-display"></strong>
           <button class="copy-btn" onclick="copyId()">コピー</button>
         </div>
-
         <div class="redirect-url" id="redirect-url-display"></div>
-
         <button class="btn btn-dark" onclick="downloadQR()">QR コードをダウンロード</button>
         <button class="btn btn-outline" onclick="resetCreate()">新しく作る</button>
       </div>
@@ -229,14 +314,40 @@
 
     <!-- 編集パネル -->
     <div class="panel" id="panel-edit">
-      <label>管理ID</label>
-      <input type="text" id="edit-id" placeholder="例: abc123">
 
-      <label>パスワード</label>
-      <input type="password" id="edit-pw" placeholder="作成時に設定したパスワード">
+      <!-- 検索セクション -->
+      <label>タイトル・作成者名で検索</label>
+      <div class="search-wrap field">
+        <input type="text" id="search-input" placeholder="例: 会社紹介、伏見" onkeydown="if(event.key==='Enter') searchQR()">
+        <button class="search-btn" onclick="searchQR()">検索</button>
+      </div>
 
-      <label>新しい遷移先 URL</label>
-      <input type="url" id="edit-url" placeholder="https://new-destination.com">
+      <div class="hidden" id="search-results-wrap">
+        <div class="search-results" id="search-results"></div>
+      </div>
+
+      <div class="divider">または ID を直接入力</div>
+
+      <!-- 選択済みバッジ -->
+      <div class="selected-badge hidden" id="selected-badge">
+        選択中: <strong id="selected-title"></strong>
+        <button class="clear-btn" onclick="clearSelected()">✕ 解除</button>
+      </div>
+
+      <div class="field">
+        <label>管理ID</label>
+        <input type="text" id="edit-id" placeholder="例: abc123">
+      </div>
+
+      <div class="field">
+        <label>パスワード</label>
+        <input type="password" id="edit-pw" placeholder="作成時に設定したパスワード">
+      </div>
+
+      <div class="field">
+        <label>新しい遷移先 URL</label>
+        <input type="url" id="edit-url" placeholder="https://new-destination.com">
+      </div>
 
       <button class="btn btn-dark" id="edit-btn" onclick="editQR()">変更を保存</button>
 
@@ -258,8 +369,10 @@
   }
 
   async function createQR() {
-    const url = document.getElementById('create-url').value.trim();
+    const title   = document.getElementById('create-title').value.trim();
+    const url     = document.getElementById('create-url').value.trim();
     const password = document.getElementById('create-pw').value.trim();
+    const creator = document.getElementById('create-creator').value.trim();
     const btn = document.getElementById('create-btn');
 
     btn.disabled = true;
@@ -269,14 +382,11 @@
       const res = await fetch('/api/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, password }),
+        body: JSON.stringify({ title, url, password, creator }),
       });
       const d = await res.json();
 
-      if (d.error) {
-        alert(d.error);
-        return;
-      }
+      if (d.error) { alert(d.error); return; }
 
       currentQrB64 = d.qr_image;
       currentId = d.id;
@@ -286,9 +396,9 @@
       document.getElementById('redirect-url-display').textContent = d.redirect_url;
       document.getElementById('create-result').classList.remove('hidden');
       document.getElementById('create-btn').classList.add('hidden');
-      document.getElementById('create-url').disabled = true;
-      document.getElementById('create-pw').disabled = true;
-
+      ['create-title','create-url','create-pw','create-creator'].forEach(id => {
+        document.getElementById(id).disabled = true;
+      });
     } catch {
       alert('通信エラーが発生しました');
     } finally {
@@ -312,18 +422,74 @@
   }
 
   function resetCreate() {
-    document.getElementById('create-url').value = '';
-    document.getElementById('create-url').disabled = false;
-    document.getElementById('create-pw').value = '';
-    document.getElementById('create-pw').disabled = false;
+    ['create-title','create-url','create-pw','create-creator'].forEach(id => {
+      document.getElementById(id).value = '';
+      document.getElementById(id).disabled = false;
+    });
     document.getElementById('create-result').classList.add('hidden');
     document.getElementById('create-btn').classList.remove('hidden');
     currentQrB64 = '';
     currentId = '';
   }
 
+  // ---- 検索 ----
+  let searchTimer = null;
+
+  async function searchQR() {
+    const q = document.getElementById('search-input').value.trim();
+    if (!q) return;
+
+    const wrap = document.getElementById('search-results-wrap');
+    const container = document.getElementById('search-results');
+    container.innerHTML = '<div class="search-empty">検索中...</div>';
+    wrap.classList.remove('hidden');
+
+    try {
+      const res = await fetch('/api/search?q=' + encodeURIComponent(q));
+      const d = await res.json();
+
+      if (d.error) {
+        container.innerHTML = `<div class="search-empty">${d.error}</div>`;
+        return;
+      }
+
+      if (!d.results.length) {
+        container.innerHTML = '<div class="search-empty">見つかりませんでした</div>';
+        return;
+      }
+
+      container.innerHTML = d.results.map(r => `
+        <div class="search-result-item" onclick="selectResult('${r.id}', '${escHtml(r.title)}')">
+          <div class="result-title">${escHtml(r.title)}</div>
+          <div class="result-meta">ID: ${r.id} &nbsp;·&nbsp; 作成者: ${escHtml(r.creator)} &nbsp;·&nbsp; ${escHtml(r.url)}</div>
+        </div>
+      `).join('');
+    } catch {
+      container.innerHTML = '<div class="search-empty">通信エラーが発生しました</div>';
+    }
+  }
+
+  function selectResult(id, title) {
+    document.getElementById('edit-id').value = id;
+    document.getElementById('selected-title').textContent = title;
+    document.getElementById('selected-badge').classList.remove('hidden');
+    document.getElementById('search-results-wrap').classList.add('hidden');
+    document.getElementById('search-input').value = '';
+    document.getElementById('edit-pw').focus();
+  }
+
+  function clearSelected() {
+    document.getElementById('edit-id').value = '';
+    document.getElementById('selected-badge').classList.add('hidden');
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ---- 編集 ----
   async function editQR() {
-    const id = document.getElementById('edit-id').value.trim();
+    const id      = document.getElementById('edit-id').value.trim();
     const password = document.getElementById('edit-pw').value.trim();
     const new_url = document.getElementById('edit-url').value.trim();
     const btn = document.getElementById('edit-btn');
@@ -341,7 +507,8 @@
       });
       const d = await res.json();
 
-      msg.classList.remove('hidden', 'msg-ok', 'msg-err');
+      msg.className = 'msg';
+      msg.classList.remove('hidden');
       if (d.ok) {
         msg.classList.add('msg-ok');
         msg.textContent = '✓ 変更を保存しました！QR コードはそのまま使えます。';
@@ -351,8 +518,8 @@
         msg.textContent = d.error || 'エラーが発生しました';
       }
     } catch {
+      msg.className = 'msg msg-err';
       msg.classList.remove('hidden');
-      msg.classList.add('msg-err');
       msg.textContent = '通信エラーが発生しました';
     } finally {
       btn.disabled = false;

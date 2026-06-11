@@ -2,4 +2,6 @@ flask
 supabase
 qrcode[pil]
 bcrypt
+gspread
+google-auth
 gunicorn
