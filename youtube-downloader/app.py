@@ -1,8 +1,9 @@
 import os
+import shutil
 import tempfile
 import uuid
 import threading
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify, send_file, after_this_request
 
 app = Flask(__name__)
 jobs = {}
@@ -135,7 +136,30 @@ def serve_file(job_id):
     job = jobs.get(job_id)
     if not job or job.get('status') != 'done':
         return 'ファイルの準備ができていません', 404
-    return send_file(job['filepath'], as_attachment=True, download_name=job['filename'])
+
+    filepath = job['filepath']
+    tmpdir = os.path.dirname(filepath)
+
+    @after_this_request
+    def cleanup(response):
+        try:
+            shutil.rmtree(tmpdir, ignore_errors=True)
+            jobs.pop(job_id, None)
+        except Exception:
+            pass
+        return response
+
+    return send_file(filepath, as_attachment=True, download_name=job['filename'])
+
+
+@app.route('/api/status')
+def status():
+    total, used, free = shutil.disk_usage('/tmp')
+    return jsonify({
+        'disk_total_gb': round(total / 1e9, 2),
+        'disk_used_gb': round(used / 1e9, 2),
+        'disk_free_gb': round(free / 1e9, 2),
+    })
 
 
 if __name__ == '__main__':
