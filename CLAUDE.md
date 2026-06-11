@@ -66,4 +66,4 @@ render deploys create srv-d8l3bt9o3t8c73ajjgig --confirm
 | ツール | サービスID | URL |
 |--------|-----------|-----|
 | Flare Downloader | srv-d8l3bt9o3t8c73ajjgig | https://fushimitools-youtube.onrender.com |
-| QR Generator | srv-d8l6cjreo5us73b51jf0 | https://fushimitools-qr.onrender.com |
+| QR Generator | srv-d8l6vem7r5hc739n7ci0 | https://flareqr.onrender.com |
