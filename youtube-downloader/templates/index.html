@@ -174,9 +174,28 @@
     @keyframes spin { to { transform: rotate(360deg); } }
 
     .hidden { display: none !important; }
+
+    .back-link {
+      position: fixed;
+      top: 16px; left: 16px;
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 12px;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.12);
+      font-size: 13px; font-weight: 600; color: #333;
+      text-decoration: none;
+      transition: box-shadow .15s;
+      z-index: 100;
+    }
+
+    .back-link:hover { box-shadow: 0 2px 8px rgba(0,0,0,.18); }
   </style>
 </head>
 <body>
+<a class="back-link" href="https://TatsuyaFushimi.github.io/FushimiTools/" target="_blank">
+  ← ツール一覧
+</a>
 <div class="container">
 
   <header>

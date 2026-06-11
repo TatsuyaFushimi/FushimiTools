@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>伏見ツール一覧</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+      background: #f4f4f4;
+      min-height: 100vh;
+      padding: 40px 24px;
+      color: #111;
+    }
+
+    .container { max-width: 900px; margin: 0 auto; }
+
+    header { margin-bottom: 40px; }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .brand-icon {
+      width: 44px; height: 44px;
+      background: linear-gradient(135deg, #111 0%, #444 100%);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff;
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -1px;
+    }
+
+    h1 { font-size: 26px; font-weight: 700; }
+
+    .subtitle { color: #666; font-size: 14px; margin-top: 4px; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 1px 6px rgba(0,0,0,.07);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: transform .15s, box-shadow .15s;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(0,0,0,.1);
+    }
+
+    .card-icon {
+      width: 48px; height: 48px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+    }
+
+    .card-title { font-size: 16px; font-weight: 700; }
+
+    .card-desc { font-size: 13px; color: #666; line-height: 1.55; flex: 1; }
+
+    .card-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+    }
+
+    .badge {
+      padding: 3px 8px;
+      border-radius: 99px;
+      font-weight: 600;
+    }
+
+    .badge-noai { background: #e8f5e9; color: #2e7d32; }
+    .badge-ai   { background: #fff3e0; color: #e65100; }
+
+    .btn-open {
+      display: block;
+      text-align: center;
+      padding: 10px;
+      background: #111;
+      color: #fff;
+      border-radius: 9px;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      transition: background .15s;
+    }
+
+    .btn-open:hover { background: #333; }
+
+    footer {
+      margin-top: 48px;
+      text-align: center;
+      font-size: 12px;
+      color: #aaa;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="brand">
+      <div class="brand-icon">F</div>
+      <h1>伏見ツール一覧</h1>
+    </div>
+    <p class="subtitle">社内で使えるツール・アプリをまとめています</p>
+  </header>
+
+  <div class="grid">
+
+    <!-- Flare Downloader -->
+    <div class="card">
+      <div class="card-icon" style="background:#fff3f3;">🔥</div>
+      <div class="card-title">Flare Downloader</div>
+      <div class="card-desc">YouTube の URL を貼り付けて MP4 でダウンロード。解像度を選択可能。</div>
+      <div class="card-meta">
+        <span class="badge badge-noai">AI不要</span>
+      </div>
+      <a class="btn-open" href="https://fushimitools-youtube.onrender.com" target="_blank">開く</a>
+    </div>
+
+    <!-- 今後のツールはここに追加 -->
+
+  </div>
+
+  <footer>FushimiTools — <a href="https://github.com/TatsuyaFushimi/FushimiTools" style="color:#aaa;">GitHub</a></footer>
+
+</div>
+</body>
+</html>
