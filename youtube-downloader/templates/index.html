@@ -281,13 +281,14 @@
     </div>
     <p class="cookie-desc">
       YouTubeのBot判定を回避するためブラウザのCookieが必要です。<br>
-      ①スクリプトをダウンロード → ②<strong>右クリック→「開く」</strong>で実行 → 完了<br>
-      <span style="color:#aaa;">※ダブルクリックだとMacにブロックされます。必ず右クリック→「開く」で。</span>
+      ① <b>Terminal</b> を開く（Cmd+Space →「Terminal」と入力）<br>
+      ② 下のコマンドをコピーして貼り付け → Enter
     </p>
 
-    <a class="btn btn-red" href="/api/cookie-updater" download style="display:block;text-align:center;text-decoration:none;margin-bottom:12px;">
-      ⬇ Cookie更新スクリプトをダウンロード（Mac用）
-    </a>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
+      <code id="cookie-cmd" style="flex:1;background:#f4f4f4;border-radius:8px;padding:10px 12px;font-size:12px;word-break:break-all;">bash &lt;(curl -s https://fushimitools-youtube.onrender.com/api/cookie-script)</code>
+      <button class="btn btn-red" onclick="copyCmd()" id="copy-btn" style="white-space:nowrap;flex-shrink:0;">コピー</button>
+    </div>
 
     <details style="font-size:12px;color:#aaa;">
       <summary style="cursor:pointer;">手動でアップロードする場合</summary>
@@ -444,6 +445,15 @@
     const el = document.getElementById('dl-error');
     el.textContent = msg;
     el.classList.remove('hidden');
+  }
+
+  function copyCmd() {
+    const cmd = `bash <(curl -s https://fushimitools-youtube.onrender.com/api/cookie-script)`;
+    navigator.clipboard.writeText(cmd).then(() => {
+      const btn = document.getElementById('copy-btn');
+      btn.textContent = 'コピー済み！';
+      setTimeout(() => btn.textContent = 'コピー', 2000);
+    });
   }
 
   // Cookie管理

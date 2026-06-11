@@ -188,10 +188,14 @@ def serve_file(job_id):
     return send_file(filepath, as_attachment=True, download_name=job['filename'])
 
 
-@app.route('/api/cookie-updater')
-def cookie_updater():
+@app.route('/api/cookie-script')
+def cookie_script():
+    """Gatekeeper回避: ファイル保存せずcurl|bashで直接実行させる"""
     path = os.path.join(os.path.dirname(__file__), 'update-cookies.command')
-    return send_file(path, as_attachment=True, download_name='update-cookies.command')
+    with open(path, 'r') as f:
+        content = f.read()
+    from flask import Response
+    return Response(content, mimetype='text/plain')
 
 
 @app.route('/api/cookies', methods=['POST'])
