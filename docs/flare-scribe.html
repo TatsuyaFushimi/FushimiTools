@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flare Scribe</title>
+  <link rel="icon" href="flare-scribe-icon.png">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+      background: #f4f4f4;
+      min-height: 100vh;
+      padding: 40px 24px;
+      color: #111;
+    }
+
+    .container { max-width: 680px; margin: 0 auto; }
+
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 13px; color: #888; text-decoration: none;
+      background: #fff; padding: 7px 14px;
+      border-radius: 20px;
+      box-shadow: 0 1px 6px rgba(0,0,0,.08);
+      margin-bottom: 32px;
+      transition: color .15s;
+    }
+
+    .back-link:hover { color: #111; }
+
+    .hero {
+      background: #fff;
+      border-radius: 24px;
+      padding: 36px;
+      box-shadow: 0 2px 16px rgba(0,0,0,.07);
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      margin-bottom: 16px;
+    }
+
+    .hero-icon {
+      width: 96px; height: 96px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+
+    .hero-text h1 { font-size: 26px; font-weight: 800; margin-bottom: 6px; }
+
+    .hero-text p { font-size: 14px; color: #666; line-height: 1.6; }
+
+    .card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 28px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.07);
+      margin-bottom: 16px;
+    }
+
+    .card-title {
+      font-size: 13px; font-weight: 700;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 18px;
+    }
+
+    .dl-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 16px;
+      background: #111;
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      font-size: 15px;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background .15s;
+      margin-bottom: 10px;
+    }
+
+    .dl-btn:hover { background: #333; }
+
+    .dl-note {
+      text-align: center;
+      font-size: 12px;
+      color: #aaa;
+    }
+
+    .steps { counter-reset: step; display: flex; flex-direction: column; gap: 14px; }
+
+    .step {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+
+    .step-num {
+      counter-increment: step;
+      min-width: 28px; height: 28px;
+      background: #111;
+      color: #fff;
+      border-radius: 50%;
+      font-size: 12px;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .step-body { flex: 1; }
+
+    .step-title { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+
+    .step-desc { font-size: 13px; color: #666; line-height: 1.55; }
+
+    .step-desc code {
+      background: #f4f4f4;
+      border-radius: 5px;
+      padding: 1px 6px;
+      font-size: 12px;
+      font-family: 'SF Mono', monospace;
+    }
+
+    .warn-box {
+      background: #fff8e1;
+      border-left: 3px solid #f59e0b;
+      border-radius: 0 10px 10px 0;
+      padding: 12px 14px;
+      font-size: 13px;
+      color: #78350f;
+      margin-top: 16px;
+      line-height: 1.55;
+    }
+
+    .req-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .req-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+      padding: 10px 0;
+      border-bottom: 1px solid #f4f4f4;
+    }
+
+    .req-item:last-child { border-bottom: none; }
+
+    .req-label { font-weight: 600; }
+
+    .req-val { color: #666; font-size: 13px; }
+
+    footer {
+      text-align: center;
+      font-size: 12px;
+      color: #bbb;
+      margin-top: 32px;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <a class="back-link" href="index.html">← ツール一覧</a>
+
+  <div class="hero">
+    <img src="flare-scribe-icon.png" class="hero-icon" alt="Flare Scribe">
+    <div class="hero-text">
+      <h1>Flare Scribe</h1>
+      <p>YouTube URL または MP4 ファイルから文字起こし。<br>シンプルTXT・タイムコード付きTXT・SRT の3形式でダウンロード可能。ローカルで動作するので安全。</p>
+    </div>
+  </div>
+
+  <!-- ダウンロード -->
+  <div class="card">
+    <div class="card-title">ダウンロード</div>
+    <a class="dl-btn" href="https://github.com/TatsuyaFushimi/FushimiTools/releases/download/v1.0-scribe/FlareScribe-arm64.zip">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Flare Scribe をダウンロード
+    </a>
+    <p class="dl-note">FlareScribe-arm64.zip（Apple Silicon専用）</p>
+  </div>
+
+  <!-- 動作環境 -->
+  <div class="card">
+    <div class="card-title">動作環境</div>
+    <div class="req-list">
+      <div class="req-item">
+        <span class="req-label">Mac</span>
+        <span class="req-val">Apple Silicon（M1以降）</span>
+      </div>
+      <div class="req-item">
+        <span class="req-label">macOS</span>
+        <span class="req-val">Ventura 13.0 以降推奨</span>
+      </div>
+      <div class="req-item">
+        <span class="req-label">ffmpeg</span>
+        <span class="req-val">Homebrewでインストール必要</span>
+      </div>
+      <div class="req-item">
+        <span class="req-label">初回文字起こし</span>
+        <span class="req-val">Whisper mediumモデル（769MB）を自動DL</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- セットアップ手順 -->
+  <div class="card">
+    <div class="card-title">セットアップ手順</div>
+    <div class="steps">
+
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">ffmpeg をインストール <span style="color:#c00;font-size:12px;font-weight:600;">（チームフレアはFlarePocket導入時にインストール済み：スキップ）</span></div>
+          <div class="step-desc">
+            Homebrew が未インストールの場合は先に <a href="https://brew.sh" target="_blank" style="color:#111;">brew.sh</a> からインストール。<br>
+            その後ターミナルで：<br>
+            <code>brew install ffmpeg</code>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">zip を解凍して .app を移動</div>
+          <div class="step-desc">ダウンロードした zip を解凍し、<strong>Flare Scribe.app</strong> を「アプリケーション」フォルダへ移動。</div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-title">初回のみ：システム設定から許可する</div>
+          <div class="step-desc">
+            署名なしアプリのため、ダブルクリックすると「ゴミ箱に入れる」しか表示されません。<br>
+            「完了」をクリック → <strong>システム設定 → プライバシーとセキュリティ</strong> を開く → 下の方に「"Flare Scribe" は…」という表示が出るので <strong>「このまま開く」</strong> をクリック → パスワードを入力。<br>
+            2回目以降は普通にダブルクリックで起動できます。
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <div class="step-title">ブラウザが自動で開く</div>
+          <div class="step-desc">
+            アプリを起動するとブラウザで自動的に <code>localhost:5002</code> が開きます。<br><br>
+            初回起動は macOS の安全確認のため、<strong>アイコンが跳ねるだけで終わります（正常です）。</strong><br>
+            跳ねている間に <strong>Dock のアイコンを右クリック → 「オプション」→「Dock に残す」</strong> を設定してから、<strong>「強制終了」</strong> してください。<br><br>
+            もう一度 Dock から開くとブラウザが自動で起動します。<strong>2回目以降は即起動します。</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <div class="step-title">初回文字起こし時：モデルを自動ダウンロード</div>
+          <div class="step-desc">
+            初回の文字起こし実行時に Whisper medium モデル（約769MB）を自動でダウンロードします。<br>
+            ダウンロード中は「モデル読み込み中」と表示されます。2回目以降はキャッシュを使用するので待ち時間なし。
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="warn-box">
+      ⚠️ アプリを終了すると文字起こしが中断されます。完了まで終了しないでください。
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
