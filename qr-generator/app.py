@@ -105,7 +105,7 @@ def create_qr():
     if not title:
         return jsonify({'error': 'タイトルを入力してください'}), 400
     if not url:
-        return jsonify({'error': 'URLを入力してください'}), 400
+        url = 'https://www.busoken.com/'
     if not password:
         return jsonify({'error': 'パスワードを設定してください'}), 400
     if not creator:
