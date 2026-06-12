@@ -112,13 +112,19 @@ def _do_download(job_id, url, height):
 
     tmpdir = tempfile.mkdtemp()
 
+    # h264(avc1)を優先 → QuickTime互換。なければVP9等にフォールバック
     if not height or height == 'best':
-        fmt = 'bestvideo+bestaudio/best'
+        fmt = (
+            'bestvideo[vcodec^=avc1]+bestaudio[acodec^=mp4a]/'
+            'bestvideo[vcodec^=avc1]+bestaudio/'
+            'bestvideo+bestaudio/best'
+        )
     else:
         fmt = (
+            f'bestvideo[vcodec^=avc1][height<={height}]+bestaudio[acodec^=mp4a]/'
+            f'bestvideo[vcodec^=avc1][height<={height}]+bestaudio/'
             f'bestvideo[height<={height}]+bestaudio/'
-            f'best[height<={height}]/'
-            f'best'
+            f'best[height<={height}]/best'
         )
 
     def progress_hook(d):
