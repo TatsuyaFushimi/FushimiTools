@@ -399,7 +399,7 @@
       </div>
     </div>
     <div class="search-grid">
-      <select id="s-channel" onchange="filterList()">
+      <select id="s-channel">
         <option value="">すべてのch</option>
         <option>船原ch</option>
         <option>萬田ch</option>
@@ -419,8 +419,8 @@
         <option>Amazon輸出 ch</option>
         <option>その他</option>
       </select>
-      <input type="text" id="s-title" placeholder="タイトルで絞り込み" oninput="filterList()">
-      <input type="text" id="s-creator" placeholder="作成者で絞り込み" oninput="filterList()">
+      <input type="text" id="s-title" placeholder="タイトルで絞り込み">
+      <input type="text" id="s-creator" placeholder="作成者で絞り込み">
       <button class="btn btn-dark" onclick="filterList()" style="white-space:nowrap;">検索</button>
     </div>
     <div class="qr-list" id="qr-list">
