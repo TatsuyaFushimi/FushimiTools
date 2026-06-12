@@ -147,10 +147,17 @@
   <!-- 結果 -->
   <div class="card hidden" id="result-card">
     <div class="card-title">文字起こし完了</div>
+    <div class="tabs" style="margin-bottom:12px;">
+      <div class="tab active" id="preview-tab-txt" onclick="switchPreview('txt')">シンプル</div>
+      <div class="tab" id="preview-tab-timecode" onclick="switchPreview('timecode')">タイムコード付き</div>
+    </div>
     <div class="preview-box" id="preview-box"></div>
-    <div class="btn-row">
-      <button class="btn btn-dark" style="flex:1;" onclick="downloadFile('txt')">TXT でダウンロード</button>
-      <button class="btn btn-outline" style="flex:1;" onclick="downloadFile('srt')">SRT（字幕）でダウンロード</button>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <div class="btn-row">
+        <button class="btn btn-dark" style="flex:1;" onclick="downloadFile('txt')">TXT（シンプル）</button>
+        <button class="btn btn-dark" style="flex:1;" onclick="downloadFile('timecode')">TXT（タイムコード付き）</button>
+      </div>
+      <button class="btn btn-outline btn-full" onclick="downloadFile('srt')">SRT（字幕形式）</button>
     </div>
     <button class="btn btn-outline btn-full" style="margin-top:8px;" onclick="reset()">新しく文字起こし</button>
   </div>
@@ -167,6 +174,8 @@
   let currentJobId = null;
   let pollTimer = null;
   let ytInfoTimer = null;
+  let previewMode = 'txt';
+  let previewData = { txt: '', timecode: '' };
 
   function switchTab(tab) {
     currentTab = tab;
@@ -317,11 +326,23 @@
     transcribing:  '文字起こし中...',
   };
 
+  function switchPreview(mode) {
+    previewMode = mode;
+    document.getElementById('preview-tab-txt').classList.toggle('active', mode === 'txt');
+    document.getElementById('preview-tab-timecode').classList.toggle('active', mode === 'timecode');
+    document.getElementById('preview-box').textContent = previewData[mode] || '';
+  }
+
   function handleProgress(d) {
     if (d.status === 'done') {
+      previewData.txt = d.preview_txt || '';
+      previewData.timecode = d.preview_timecode || '';
+      previewMode = 'txt';
+      document.getElementById('preview-tab-txt').classList.add('active');
+      document.getElementById('preview-tab-timecode').classList.remove('active');
+      document.getElementById('preview-box').textContent = previewData.txt;
       document.getElementById('progress-card').classList.add('hidden');
       document.getElementById('result-card').classList.remove('hidden');
-      document.getElementById('preview-box').textContent = d.preview || '';
       return;
     }
     if (d.status === 'error') {
@@ -345,6 +366,7 @@
   function reset() {
     clearInterval(pollTimer);
     currentJobId = null;
+    previewData = { txt: '', timecode: '' };
     document.getElementById('yt-url').value = '';
     document.getElementById('file-input').value = '';
     document.getElementById('file-name').classList.add('hidden');

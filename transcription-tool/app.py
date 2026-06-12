@@ -21,6 +21,12 @@ def _ffmpeg_path():
     return shutil.which('ffmpeg')
 
 
+def _seconds_to_timecode(s):
+    h, r = divmod(int(s), 3600)
+    m, sec = divmod(r, 60)
+    return f'{h:02d}:{m:02d}:{sec:02d}'
+
+
 def _seconds_to_srt(s):
     h, r = divmod(int(s), 3600)
     m, sec = divmod(r, 60)
@@ -70,12 +76,13 @@ def _do_transcribe(job_id, audio_path, title, language, model_size):
         segments, info = model.transcribe(audio_path, beam_size=5, language=lang, vad_filter=True)
         duration = info.duration or 1
 
-        txt_parts, srt_parts = [], []
+        txt_parts, srt_parts, tc_parts = [], [], []
         idx = 1
         for seg in segments:
             text = seg.text.strip()
             if text:
                 txt_parts.append(text)
+                tc_parts.append(f'[{_seconds_to_timecode(seg.start)}] {text}')
                 s = _seconds_to_srt(seg.start)
                 e = _seconds_to_srt(seg.end)
                 srt_parts.append(f'{idx}\n{s} --> {e}\n{text}\n')
@@ -83,14 +90,17 @@ def _do_transcribe(job_id, audio_path, title, language, model_size):
             jobs[job_id]['progress'] = min(99, int(seg.end / duration * 100))
 
         txt = '\n'.join(txt_parts)
+        timecode_txt = '\n'.join(tc_parts)
         srt = '\n'.join(srt_parts)
         jobs[job_id].update({
             'status': 'done',
             'progress': 100,
             'title': title,
             'txt': txt,
+            'timecode_txt': timecode_txt,
             'srt': srt,
-            'preview': txt[:500],
+            'preview_txt': txt[:500],
+            'preview_timecode': timecode_txt[:500],
         })
     except Exception as e:
         jobs[job_id].update({'status': 'error', 'error': str(e)})
@@ -186,12 +196,14 @@ def download(job_id, fmt):
     job = jobs.get(job_id)
     if not job or job.get('status') != 'done':
         return 'ファイルの準備ができていません', 404
-    if fmt not in ('txt', 'srt'):
+    if fmt not in ('txt', 'timecode', 'srt'):
         return 'フォーマットエラー', 400
-    content = job[fmt]
+    content = job['timecode_txt'] if fmt == 'timecode' else job[fmt]
     safe_name = (job.get('title') or 'transcript').replace('/', '_')[:80]
+    ext = 'txt' if fmt in ('txt', 'timecode') else fmt
+    suffix = '_タイムコード' if fmt == 'timecode' else ''
     resp = Response(content, mimetype='text/plain; charset=utf-8')
-    resp.headers['Content-Disposition'] = f"attachment; filename*=UTF-8''{safe_name}.{fmt}"
+    resp.headers['Content-Disposition'] = f"attachment; filename*=UTF-8''{safe_name}{suffix}.{ext}"
     return resp
 
 
