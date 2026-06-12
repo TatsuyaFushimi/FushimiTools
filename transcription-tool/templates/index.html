@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flare Transcript</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif; background: #f4f4f4; min-height: 100vh; padding: 24px; color: #111; }
+    .container { max-width: 640px; margin: 0 auto; }
+
+    header { text-align: center; margin-bottom: 28px; }
+    .logo-name { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; display: block; margin-bottom: 5px; }
+    .subtitle { font-size: 13px; color: #888; }
+
+    .card { background: #fff; border-radius: 20px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,.07); margin-bottom: 16px; }
+    .card-title { font-size: 13px; font-weight: 700; color: #888; margin-bottom: 16px; text-transform: uppercase; letter-spacing: .5px; }
+
+    .tabs { display: flex; gap: 4px; background: #f4f4f4; border-radius: 10px; padding: 4px; margin-bottom: 16px; }
+    .tab { flex: 1; padding: 8px; text-align: center; font-size: 13px; font-weight: 600; border-radius: 7px; cursor: pointer; transition: all .15s; color: #888; }
+    .tab.active { background: #fff; color: #111; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    .field { margin-bottom: 12px; }
+    label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; color: #333; }
+    input[type=url], select {
+      width: 100%; padding: 10px 13px; border: 1.5px solid #e0e0e0;
+      border-radius: 10px; font-size: 14px; outline: none; background: #fff; transition: border-color .15s;
+    }
+    select {
+      appearance: none; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 12px center; padding-right: 34px;
+    }
+    input:focus, select:focus { border-color: #111; }
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    .drop-zone {
+      border: 2px dashed #ddd; border-radius: 12px; padding: 28px;
+      text-align: center; cursor: pointer; transition: all .15s; color: #888; font-size: 14px;
+    }
+    .drop-zone:hover, .drop-zone.dragover { border-color: #111; background: #f8f8f8; color: #111; }
+    .drop-zone input[type=file] { display: none; }
+    .file-selected { font-size: 13px; color: #111; font-weight: 600; margin-top: 8px; }
+
+    .btn { padding: 11px 20px; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all .15s; }
+    .btn-dark { background: #111; color: #fff; }
+    .btn-dark:hover { background: #333; }
+    .btn-dark:disabled { background: #ccc; cursor: not-allowed; }
+    .btn-outline { background: #fff; color: #111; border: 1.5px solid #ddd; }
+    .btn-outline:hover { background: #f4f4f4; }
+    .btn-full { width: 100%; }
+    .btn-row { display: flex; gap: 8px; }
+
+    .progress-bar-wrap { background: #f0f0f0; border-radius: 99px; height: 8px; margin: 16px 0 6px; overflow: hidden; }
+    .progress-bar { height: 100%; background: #111; border-radius: 99px; transition: width .4s; }
+    .progress-pct { text-align: center; font-size: 12px; color: #bbb; }
+    .status-text { font-size: 14px; color: #555; text-align: center; margin-bottom: 4px; }
+
+    .preview-box {
+      background: #f8f8f8; border-radius: 10px; padding: 14px;
+      font-size: 13px; line-height: 1.75; color: #444;
+      max-height: 180px; overflow-y: auto;
+      white-space: pre-wrap; word-break: break-all;
+      margin-bottom: 14px;
+    }
+
+    .msg-err { background: #fde0e0; color: #c00; font-size: 13px; padding: 10px 14px; border-radius: 8px; margin-top: 10px; }
+    .hidden { display: none !important; }
+
+    .spinner {
+      display: inline-block; width: 16px; height: 16px;
+      border: 2px solid #ddd; border-top-color: #111;
+      border-radius: 50%; animation: spin .6s linear infinite;
+      vertical-align: middle; margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .note { font-size: 12px; color: #aaa; margin-top: 10px; text-align: center; line-height: 1.6; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <span class="logo-name">Flare Transcript</span>
+    <p class="subtitle">YouTube URL または MP4 ファイルを文字起こし</p>
+  </header>
+
+  <!-- 入力 -->
+  <div class="card" id="input-card">
+    <div class="card-title">文字起こし</div>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('url')">YouTube URL</div>
+      <div class="tab" onclick="switchTab('file')">MP4ファイル</div>
+    </div>
+
+    <div id="pane-url" class="tab-pane active">
+      <div class="field">
+        <label>YouTube URL</label>
+        <input type="url" id="yt-url" placeholder="https://www.youtube.com/watch?v=...">
+      </div>
+    </div>
+
+    <div id="pane-file" class="tab-pane">
+      <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+        <input type="file" id="file-input" accept=".mp4,.m4v,.mov" onchange="onFileSelect(this)">
+        <div>クリックまたはドラッグ＆ドロップ</div>
+        <div style="font-size:12px;margin-top:4px;color:#bbb;">MP4 / MOV 対応（最大500MB）</div>
+        <div class="file-selected hidden" id="file-name"></div>
+      </div>
+    </div>
+
+    <div class="row-2" style="margin-top:14px;">
+      <div class="field">
+        <label>言語</label>
+        <select id="language">
+          <option value="ja">日本語</option>
+          <option value="en">English</option>
+          <option value="auto">自動検出</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>モデル</label>
+        <select id="model">
+          <option value="small">small（標準）</option>
+          <option value="tiny">tiny（高速・精度低）</option>
+          <option value="medium">medium（高精度・低速）</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="btn btn-dark btn-full" id="start-btn" onclick="startTranscribe()">文字起こし開始</button>
+    <div class="msg-err hidden" id="input-err"></div>
+    <p class="note">初回のみWhisperモデルを自動ダウンロードします（smallで約244MB）</p>
+  </div>
+
+  <!-- 進捗 -->
+  <div class="card hidden" id="progress-card">
+    <div class="card-title">処理中</div>
+    <div class="status-text" id="status-text"><span class="spinner"></span>処理を開始中...</div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar" id="progress-bar" style="width:0%"></div>
+    </div>
+    <div class="progress-pct" id="progress-pct"></div>
+  </div>
+
+  <!-- 結果 -->
+  <div class="card hidden" id="result-card">
+    <div class="card-title">文字起こし完了</div>
+    <div class="preview-box" id="preview-box"></div>
+    <div class="btn-row">
+      <button class="btn btn-dark" style="flex:1;" onclick="downloadFile('txt')">TXT でダウンロード</button>
+      <button class="btn btn-outline" style="flex:1;" onclick="downloadFile('srt')">SRT（字幕）でダウンロード</button>
+    </div>
+    <button class="btn btn-outline btn-full" style="margin-top:8px;" onclick="reset()">新しく文字起こし</button>
+  </div>
+
+  <!-- エラー -->
+  <div class="card hidden" id="error-card">
+    <div class="msg-err" id="error-msg"></div>
+    <button class="btn btn-outline btn-full" style="margin-top:12px;" onclick="reset()">やり直す</button>
+  </div>
+
+</div>
+<script>
+  let currentTab = 'url';
+  let currentJobId = null;
+  let pollTimer = null;
+
+  function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', (tab === 'url' ? 0 : 1) === i));
+    document.getElementById('pane-url').classList.toggle('active', tab === 'url');
+    document.getElementById('pane-file').classList.toggle('active', tab === 'file');
+  }
+
+  function onFileSelect(input) {
+    const f = input.files[0];
+    if (!f) return;
+    const el = document.getElementById('file-name');
+    el.textContent = f.name;
+    el.classList.remove('hidden');
+  }
+
+  const dropZone = document.getElementById('drop-zone');
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    const dt = e.dataTransfer;
+    if (dt.files[0]) {
+      document.getElementById('file-input').files = dt.files;
+      onFileSelect(document.getElementById('file-input'));
+    }
+  });
+
+  async function startTranscribe() {
+    const btn = document.getElementById('start-btn');
+    const errEl = document.getElementById('input-err');
+    errEl.classList.add('hidden');
+
+    const language = document.getElementById('language').value;
+    const model = document.getElementById('model').value;
+    btn.disabled = true;
+    btn.textContent = '処理中...';
+
+    try {
+      let jobId;
+      if (currentTab === 'url') {
+        const url = document.getElementById('yt-url').value.trim();
+        if (!url) { showErr('URLを入力してください'); return; }
+        const r = await fetch('/api/transcribe-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, language, model }),
+        });
+        const d = await r.json();
+        if (d.error) { showErr(d.error); return; }
+        jobId = d.job_id;
+      } else {
+        const fi = document.getElementById('file-input');
+        if (!fi.files[0]) { showErr('ファイルを選択してください'); return; }
+        const fd = new FormData();
+        fd.append('file', fi.files[0]);
+        fd.append('language', language);
+        fd.append('model', model);
+        const r = await fetch('/api/transcribe-file', { method: 'POST', body: fd });
+        const d = await r.json();
+        if (d.error) { showErr(d.error); return; }
+        jobId = d.job_id;
+      }
+      currentJobId = jobId;
+      document.getElementById('input-card').classList.add('hidden');
+      document.getElementById('progress-card').classList.remove('hidden');
+      startPolling(jobId);
+    } catch {
+      showErr('通信エラーが発生しました');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '文字起こし開始';
+    }
+  }
+
+  function showErr(msg) {
+    const el = document.getElementById('input-err');
+    el.textContent = msg;
+    el.classList.remove('hidden');
+  }
+
+  function startPolling(jobId) {
+    pollTimer = setInterval(async () => {
+      try {
+        const res = await fetch('/api/progress/' + jobId);
+        const d = await res.json();
+        handleProgress(d);
+        if (d.status === 'done' || d.status === 'error') clearInterval(pollTimer);
+      } catch {}
+    }, 1000);
+  }
+
+  const STATUS_LABELS = {
+    downloading:   'YouTubeから音声をダウンロード中...',
+    extracting:    '動画から音声を抽出中...',
+    loading_model: 'Whisperモデルを読み込み中（初回はDLあり）...',
+    transcribing:  '文字起こし中...',
+  };
+
+  function handleProgress(d) {
+    if (d.status === 'done') {
+      document.getElementById('progress-card').classList.add('hidden');
+      document.getElementById('result-card').classList.remove('hidden');
+      document.getElementById('preview-box').textContent = d.preview || '';
+      return;
+    }
+    if (d.status === 'error') {
+      document.getElementById('progress-card').classList.add('hidden');
+      document.getElementById('error-card').classList.remove('hidden');
+      document.getElementById('error-msg').textContent = 'エラー: ' + (d.error || '不明なエラー');
+      return;
+    }
+    const label = STATUS_LABELS[d.status] || '処理中...';
+    document.getElementById('status-text').innerHTML = '<span class="spinner"></span>' + label;
+    if (d.status === 'transcribing' && d.progress > 0) {
+      document.getElementById('progress-bar').style.width = d.progress + '%';
+      document.getElementById('progress-pct').textContent = d.progress + '%';
+    }
+  }
+
+  function downloadFile(fmt) {
+    if (currentJobId) window.location.href = '/api/download/' + currentJobId + '/' + fmt;
+  }
+
+  function reset() {
+    clearInterval(pollTimer);
+    currentJobId = null;
+    document.getElementById('yt-url').value = '';
+    document.getElementById('file-input').value = '';
+    document.getElementById('file-name').classList.add('hidden');
+    document.getElementById('preview-box').textContent = '';
+    document.getElementById('progress-bar').style.width = '0%';
+    document.getElementById('progress-pct').textContent = '';
+    ['progress-card', 'result-card', 'error-card'].forEach(id =>
+      document.getElementById(id).classList.add('hidden')
+    );
+    document.getElementById('input-card').classList.remove('hidden');
+    document.getElementById('input-err').classList.add('hidden');
+  }
+</script>
+</body>
+</html>
