@@ -151,9 +151,10 @@
     /* 検索エリア */
     .search-grid {
       display: grid;
-      grid-template-columns: 200px 1fr 1fr;
+      grid-template-columns: 200px 1fr 1fr auto;
       gap: 10px;
       margin-bottom: 16px;
+      align-items: center;
     }
 
     .search-grid select,
@@ -286,6 +287,7 @@
       .edit-panel-inner { grid-template-columns: 1fr; }
       .row-2, .row-3 { grid-template-columns: 1fr; }
       .search-grid { grid-template-columns: 1fr; }
+      .search-grid button { width: 100%; }
     }
   </style>
 </head>
@@ -419,6 +421,7 @@
       </select>
       <input type="text" id="s-title" placeholder="タイトルで絞り込み" oninput="filterList()">
       <input type="text" id="s-creator" placeholder="作成者で絞り込み" oninput="filterList()">
+      <button class="btn btn-dark" onclick="filterList()" style="white-space:nowrap;">検索</button>
     </div>
     <div class="qr-list" id="qr-list">
       <div class="empty-state">読み込み中...</div>
