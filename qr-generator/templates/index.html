@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Flare QR</title>
   <link rel="icon" href="/static/icon.png">
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -505,9 +505,12 @@
 
   function generateQR(id) {
     if (qrCache[id]) { applyQR(id, qrCache[id]); return; }
-    QRCode.toDataURL(WORKER_BASE + id, { width: 400, margin: 2 }, function(err, url) {
-      if (!err) { qrCache[id] = url; applyQR(id, url); }
-    });
+    try {
+      var qr = new QRious({ value: WORKER_BASE + id, size: 400 });
+      var url = qr.toDataURL();
+      qrCache[id] = url;
+      applyQR(id, url);
+    } catch(e) { console.error('QR生成エラー', e); }
   }
 
   function applyQR(id, url) {
@@ -663,27 +666,19 @@
   }
 
   function downloadListQR(id, title, btn) {
-    const orig = btn.textContent;
-    if (qrCache[id]) {
-      const a = document.createElement('a');
-      a.href = qrCache[id];
-      a.download = (title || id) + '.png';
-      a.click();
-      return;
+    var url = qrCache[id];
+    if (!url) {
+      try {
+        var qr = new QRious({ value: WORKER_BASE + id, size: 400 });
+        url = qr.toDataURL();
+        qrCache[id] = url;
+        applyQR(id, url);
+      } catch(e) { alert('QR生成に失敗しました'); return; }
     }
-    btn.disabled = true;
-    btn.textContent = '…';
-    QRCode.toDataURL(WORKER_BASE + id, { width: 400, margin: 2 }, function(err, url) {
-      btn.disabled = false;
-      btn.textContent = orig;
-      if (err) { alert('QR生成に失敗しました'); return; }
-      qrCache[id] = url;
-      applyQR(id, url);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = (title || id) + '.png';
-      a.click();
-    });
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = (title || id) + '.png';
+    a.click();
   }
 
   function copyId() {
