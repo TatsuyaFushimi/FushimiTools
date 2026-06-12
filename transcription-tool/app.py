@@ -101,12 +101,30 @@ def index():
     return render_template('index.html')
 
 
+@app.route('/api/yt-info', methods=['POST'])
+def yt_info():
+    data = request.json or {}
+    url = data.get('url', '').strip()
+    if not url:
+        return jsonify({'error': 'URLを入力してください'}), 400
+    try:
+        import yt_dlp
+        opts = {'quiet': True, 'no_warnings': True}
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+        return jsonify({
+            'duration': info.get('duration', 0),
+            'title': info.get('title', ''),
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+
 @app.route('/api/transcribe-url', methods=['POST'])
 def transcribe_url():
     data = request.json or {}
     url = data.get('url', '').strip()
     language = data.get('language', 'ja')
-    model_size = data.get('model', 'small')
     if not url:
         return jsonify({'error': 'URLを入力してください'}), 400
 
@@ -117,7 +135,7 @@ def transcribe_url():
         tmpdir = tempfile.mkdtemp()
         try:
             audio_path, title = _extract_audio_yt(url, tmpdir)
-            _do_transcribe(job_id, audio_path, title, language, model_size)
+            _do_transcribe(job_id, audio_path, title, language, 'medium')
         except Exception as e:
             jobs[job_id].update({'status': 'error', 'error': str(e)})
         finally:
@@ -133,7 +151,6 @@ def transcribe_file():
         return jsonify({'error': 'ファイルがありません'}), 400
     f = request.files['file']
     language = request.form.get('language', 'ja')
-    model_size = request.form.get('model', 'small')
     title = os.path.splitext(f.filename or 'transcript')[0]
 
     job_id = str(uuid.uuid4())
@@ -146,7 +163,7 @@ def transcribe_file():
     def run():
         try:
             audio_path = _extract_audio_file(video_path, tmpdir)
-            _do_transcribe(job_id, audio_path, title, language, model_size)
+            _do_transcribe(job_id, audio_path, title, language, 'medium')
         except Exception as e:
             jobs[job_id].update({'status': 'error', 'error': str(e)})
         finally:

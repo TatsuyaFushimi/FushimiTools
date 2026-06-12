@@ -78,6 +78,8 @@
     @keyframes spin { to { transform: rotate(360deg); } }
 
     .note { font-size: 12px; color: #aaa; margin-top: 10px; text-align: center; line-height: 1.6; }
+    .estimate-box { background: #f0f7ff; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #444; margin-top: 12px; line-height: 1.6; }
+    .estimate-box strong { color: #111; }
   </style>
 </head>
 <body>
@@ -113,28 +115,23 @@
       </div>
     </div>
 
-    <div class="row-2" style="margin-top:14px;">
-      <div class="field">
-        <label>言語</label>
-        <select id="language">
-          <option value="ja">日本語</option>
-          <option value="en">English</option>
-          <option value="auto">自動検出</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>モデル</label>
-        <select id="model">
-          <option value="small">small（標準）</option>
-          <option value="tiny">tiny（高速・精度低）</option>
-          <option value="medium">medium（高精度・低速）</option>
-        </select>
-      </div>
+    <div class="field" style="margin-top:14px;">
+      <label>言語</label>
+      <select id="language">
+        <option value="ja">日本語</option>
+        <option value="en">English</option>
+        <option value="auto">自動検出</option>
+      </select>
     </div>
 
-    <button class="btn btn-dark btn-full" id="start-btn" onclick="startTranscribe()">文字起こし開始</button>
+    <div class="estimate-box hidden" id="estimate-box">
+      <span id="estimate-detail"></span><br>
+      完了まで：<strong id="estimate-time">計算中...</strong>
+    </div>
+
+    <button class="btn btn-dark btn-full" id="start-btn" onclick="startTranscribe()" style="margin-top:14px;">文字起こし開始</button>
     <div class="msg-err hidden" id="input-err"></div>
-    <p class="note">初回のみWhisperモデルを自動ダウンロードします（smallで約244MB）</p>
+    <p class="note">初回のみWhisperモデルを自動ダウンロードします（mediumで約769MB）</p>
   </div>
 
   <!-- 進捗 -->
@@ -169,12 +166,38 @@
   let currentTab = 'url';
   let currentJobId = null;
   let pollTimer = null;
+  let ytInfoTimer = null;
 
   function switchTab(tab) {
     currentTab = tab;
     document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', (tab === 'url' ? 0 : 1) === i));
     document.getElementById('pane-url').classList.toggle('active', tab === 'url');
     document.getElementById('pane-file').classList.toggle('active', tab === 'file');
+    hideEstimate();
+  }
+
+  // YouTube URL 入力 → デバウンスで動画情報取得
+  document.getElementById('yt-url').addEventListener('input', function() {
+    clearTimeout(ytInfoTimer);
+    const url = this.value.trim();
+    if (!url) { hideEstimate(); return; }
+    document.getElementById('estimate-box').classList.remove('hidden');
+    document.getElementById('estimate-detail').textContent = '動画情報を取得中...';
+    document.getElementById('estimate-time').textContent = '';
+    ytInfoTimer = setTimeout(() => fetchYtInfo(url), 900);
+  });
+
+  async function fetchYtInfo(url) {
+    try {
+      const res = await fetch('/api/yt-info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const d = await res.json();
+      if (d.duration) showEstimate(d.duration, true, d.title);
+      else hideEstimate();
+    } catch { hideEstimate(); }
   }
 
   function onFileSelect(input) {
@@ -183,6 +206,33 @@
     const el = document.getElementById('file-name');
     el.textContent = f.name;
     el.classList.remove('hidden');
+    // HTML5 で動画の長さを取得
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.onloadedmetadata = function() {
+      URL.revokeObjectURL(video.src);
+      showEstimate(video.duration, false, f.name);
+    };
+    video.src = URL.createObjectURL(f);
+  }
+
+  function showEstimate(durationSecs, isYoutube, label) {
+    const m = Math.floor(durationSecs / 60);
+    const s = Math.floor(durationSecs % 60);
+    const dLabel = m > 0 ? `${m}分${s > 0 ? s + '秒' : ''}` : `${s}秒`;
+    // 推定: 4倍速 = 15秒/分 + オーバーヘッド（YouTube: 40秒, MP4: 15秒）
+    const transcribeSecs = durationSecs / 4;
+    const overhead = isYoutube ? 40 : 15;
+    const totalSecs = transcribeSecs + overhead;
+    const timeLabel = totalSecs < 60 ? '1分以内' : `約${Math.ceil(totalSecs / 60)}分`;
+    const src = isYoutube ? 'YouTube' : 'MP4';
+    document.getElementById('estimate-detail').textContent = `${src} / ${dLabel}の動画`;
+    document.getElementById('estimate-time').textContent = timeLabel;
+    document.getElementById('estimate-box').classList.remove('hidden');
+  }
+
+  function hideEstimate() {
+    document.getElementById('estimate-box').classList.add('hidden');
   }
 
   const dropZone = document.getElementById('drop-zone');
@@ -204,7 +254,6 @@
     errEl.classList.add('hidden');
 
     const language = document.getElementById('language').value;
-    const model = document.getElementById('model').value;
     btn.disabled = true;
     btn.textContent = '処理中...';
 
@@ -216,7 +265,7 @@
         const r = await fetch('/api/transcribe-url', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url, language, model }),
+          body: JSON.stringify({ url, language }),
         });
         const d = await r.json();
         if (d.error) { showErr(d.error); return; }
@@ -227,7 +276,6 @@
         const fd = new FormData();
         fd.append('file', fi.files[0]);
         fd.append('language', language);
-        fd.append('model', model);
         const r = await fetch('/api/transcribe-file', { method: 'POST', body: fd });
         const d = await r.json();
         if (d.error) { showErr(d.error); return; }
