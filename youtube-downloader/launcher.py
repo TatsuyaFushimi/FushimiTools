@@ -38,7 +38,7 @@ def _find_free_port():
 
 def _open_browser(port):
     import urllib.request
-    for _ in range(40):
+    for _ in range(240):
         try:
             urllib.request.urlopen(f'http://localhost:{port}/', timeout=1)
             break
