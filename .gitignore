@@ -6,3 +6,12 @@ __pycache__/
 *.pyc
 youtube-downloader/build/
 youtube-downloader/dist/
+
+# 認証情報・シークレット
+fushimiqr-*.json
+
+# ルート直下のローカル参照ファイル
+/*.pdf
+/Flare Downloader.png
+/Flare QR.png
+/Fushimi Tools.png
