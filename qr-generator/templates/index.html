@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Flare QR</title>
   <link rel="icon" href="/static/icon.png">
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -176,7 +177,7 @@
 
     .qr-item-row {
       display: grid;
-      grid-template-columns: 130px 1fr 80px auto auto;
+      grid-template-columns: 44px 130px 1fr 80px auto;
       align-items: center;
       gap: 12px;
       padding: 12px 16px;
@@ -224,6 +225,31 @@
 
     .empty-state { text-align: center; color: #bbb; font-size: 13px; padding: 32px; }
 
+    /* 表示切り替え */
+    .list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .view-toggle { display: flex; gap: 6px; }
+    .view-btn { padding: 5px 12px; border: 1.5px solid #e0e0e0; border-radius: 8px; background: #fff; cursor: pointer; font-size: 12px; font-weight: 600; color: #888; transition: all .15s; }
+    .view-btn.active { background: #111; color: #fff; border-color: #111; }
+
+    /* ブロックビュー */
+    .qr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+    .qr-block-card { background: #fff; border: 1.5px solid #f0f0f0; border-radius: 14px; padding: 14px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .qr-block-card .block-qr { width: 140px; height: 140px; border-radius: 6px; }
+    .qr-block-card .block-title { font-size: 13px; font-weight: 700; text-align: center; width: 100%; word-break: break-all; }
+    .qr-block-card .block-creator { font-size: 11px; color: #888; }
+    .qr-block-card .block-btns { display: flex; gap: 6px; width: 100%; }
+    .qr-block-card .block-btns button { flex: 1; }
+
+    /* ページネーション */
+    .pagination { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 16px; }
+    .page-btn { padding: 6px 16px; border: 1.5px solid #e0e0e0; border-radius: 8px; background: #fff; cursor: pointer; font-size: 13px; font-weight: 600; transition: all .15s; }
+    .page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .page-btn:not(:disabled):hover { background: #f4f4f4; }
+    .page-info { font-size: 13px; color: #888; min-width: 60px; text-align: center; }
+
+    /* 列ビューにQRサムネ */
+    .item-qr-thumb { width: 44px; height: 44px; border-radius: 6px; flex-shrink: 0; }
+
     .back-link {
       position: fixed; top: 16px; left: 16px;
       font-size: 13px; color: #888; text-decoration: none;
@@ -256,7 +282,7 @@
 
     @media (max-width: 640px) {
       .qr-item-row { grid-template-columns: 1fr auto; }
-      .item-channel, .item-creator, .item-id { display: none; }
+      .item-qr-thumb, .item-channel, .item-creator, .item-id { display: none; }
       .edit-panel-inner { grid-template-columns: 1fr; }
       .row-2, .row-3 { grid-template-columns: 1fr; }
       .search-grid { grid-template-columns: 1fr; }
@@ -363,7 +389,13 @@
 
   <!-- 一覧 -->
   <div class="card">
-    <div class="card-title">作成済みQR一覧</div>
+    <div class="list-header">
+      <div class="card-title" style="margin-bottom:0">作成済みQR一覧</div>
+      <div class="view-toggle">
+        <button class="view-btn active" id="btn-list" onclick="setView('list')">列</button>
+        <button class="view-btn" id="btn-block" onclick="setView('block')">ブロック</button>
+      </div>
+    </div>
     <div class="search-grid">
       <select id="s-channel" onchange="filterList()">
         <option value="">すべてのch</option>
@@ -391,17 +423,23 @@
     <div class="qr-list" id="qr-list">
       <div class="empty-state">読み込み中...</div>
     </div>
+    <div class="pagination hidden" id="pagination">
+      <button class="page-btn" id="btn-prev" onclick="goToPage(currentPage - 1)">← 前へ</button>
+      <span class="page-info" id="page-info"></span>
+      <button class="page-btn" id="btn-next" onclick="goToPage(currentPage + 1)">次へ →</button>
+    </div>
   </div>
 </div>
 
 <script>
-  const CHANNELS = [
-    '船原ch','萬田ch','尾藤ch','朝野ch','松永ch','成田ch','アズch',
-    'Yoshi ch','HIRAI ch','神岡ch','BIG神田ch','船原サブch',
-    '欲望夢 ch','メルカリママ ch','実践者対談 ch','Amazon輸出 ch','その他'
-  ];
+  const PAGE_SIZE = 10;
+  const WORKER_BASE = 'https://redirect.flare-qr.workers.dev/r/';
 
   let allItems = [];
+  let filteredItems = [];
+  let currentPage = 0;
+  let viewMode = 'list';
+  let qrCache = {};
   let currentQrB64 = '';
   let currentId = '';
   let currentTitle = '';
@@ -413,7 +451,8 @@
       const res = await fetch('/api/list');
       const d = await res.json();
       allItems = d.items || [];
-      renderList(allItems);
+      filteredItems = allItems.slice();
+      renderList(filteredItems);
     } catch {
       document.getElementById('qr-list').innerHTML = '<div class="empty-state">読み込みに失敗しました</div>';
     }
@@ -440,55 +479,105 @@
     const ch = document.getElementById('s-channel').value;
     const title = document.getElementById('s-title').value.trim().toLowerCase();
     const creator = document.getElementById('s-creator').value.trim().toLowerCase();
-
-    const filtered = allItems.filter(r => {
+    filteredItems = allItems.filter(r => {
       if (ch && r.channel_name !== ch) return false;
       if (title && !(r.title || '').toLowerCase().includes(title)) return false;
       if (creator && !(r.creator || '').toLowerCase().includes(creator)) return false;
       return true;
     });
-    renderList(filtered);
+    currentPage = 0;
+    renderList(filteredItems);
+  }
+
+  function setView(mode) {
+    viewMode = mode;
+    document.getElementById('btn-list').classList.toggle('active', mode === 'list');
+    document.getElementById('btn-block').classList.toggle('active', mode === 'block');
+    currentPage = 0;
+    renderList(filteredItems);
+  }
+
+  function goToPage(page) {
+    const total = Math.ceil(filteredItems.length / PAGE_SIZE);
+    currentPage = Math.max(0, Math.min(page, total - 1));
+    renderList(filteredItems);
+  }
+
+  function generateQR(id) {
+    if (qrCache[id]) { applyQR(id, qrCache[id]); return; }
+    QRCode.toDataURL(WORKER_BASE + id, { width: 400, margin: 2 }, function(err, url) {
+      if (!err) { qrCache[id] = url; applyQR(id, url); }
+    });
+  }
+
+  function applyQR(id, url) {
+    document.querySelectorAll('[data-qr-target="' + id + '"]').forEach(function(el) { el.src = url; });
   }
 
   function renderList(items) {
     const el = document.getElementById('qr-list');
-    const shown = items.slice(0, 10);
-    if (!shown.length) {
+    const totalPages = Math.ceil(items.length / PAGE_SIZE);
+    const start = currentPage * PAGE_SIZE;
+    const pageItems = items.slice(start, start + PAGE_SIZE);
+
+    const prevBtn = document.getElementById('btn-prev');
+    const nextBtn = document.getElementById('btn-next');
+    const pageInfo = document.getElementById('page-info');
+    const pag = document.getElementById('pagination');
+    prevBtn.disabled = currentPage === 0;
+    nextBtn.disabled = currentPage >= totalPages - 1 || totalPages === 0;
+    pageInfo.textContent = totalPages > 0 ? (currentPage + 1) + ' / ' + totalPages : '';
+    pag.classList.toggle('hidden', totalPages <= 1);
+
+    if (!pageItems.length) {
       el.innerHTML = '<div class="empty-state">該当するQRコードがありません</div>';
       return;
     }
-    const more = items.length > 10 ? `<div class="empty-state" style="font-size:12px;padding:12px;">他 ${items.length - 10} 件（検索で絞り込めます）</div>` : '';
-    el.innerHTML = shown.map(r => `
-      <div class="qr-item" id="item-${r.id}">
-        <div class="qr-item-row">
-          <span class="item-channel">${escHtml(r.channel_name || '—')}</span>
-          <div>
-            <div class="item-title">${escHtml(r.title)}</div>
-            <div class="item-url">${escHtml(r.destination_url)}</div>
-          </div>
-          <div class="item-creator">${escHtml(r.creator)}</div>
-          <div class="item-id">${r.id}</div>
-          <div style="display:flex;gap:6px;">
-            <button class="btn btn-outline btn-sm" data-qr-id="${r.id}" data-title="${escHtml(r.title)}" onclick="downloadListQR(this.dataset.qrId, this.dataset.title, this)">DL</button>
-            <button class="btn btn-outline btn-sm" onclick="toggleEdit('${r.id}')">編集</button>
-          </div>
-        </div>
-        <div class="edit-panel" id="edit-${r.id}">
-          <div class="edit-panel-inner">
-            <div class="field">
-              <label>パスワード</label>
-              <input type="password" id="pw-${r.id}" placeholder="作成時のパスワード">
-            </div>
-            <div class="field">
-              <label>新しい遷移先 URL</label>
-              <input type="url" id="newurl-${r.id}" placeholder="https://...">
-            </div>
-            <button class="btn btn-dark btn-sm" onclick="saveEdit('${r.id}')">保存</button>
-          </div>
-          <div class="msg hidden" id="msg-${r.id}"></div>
-        </div>
-      </div>
-    `).join('') + more;
+
+    if (viewMode === 'block') {
+      el.innerHTML = '<div class="qr-grid">' + pageItems.map(renderBlockCard).join('') + '</div>';
+    } else {
+      el.innerHTML = pageItems.map(renderListItem).join('');
+    }
+    pageItems.forEach(r => generateQR(r.id));
+  }
+
+  function renderListItem(r) {
+    return '<div class="qr-item" id="item-' + r.id + '">'
+      + '<div class="qr-item-row">'
+      + '<img class="item-qr-thumb" data-qr-target="' + r.id + '" src="" alt="QR">'
+      + '<span class="item-channel">' + escHtml(r.channel_name || '—') + '</span>'
+      + '<div><div class="item-title">' + escHtml(r.title) + '</div>'
+      + '<div class="item-url">' + escHtml(r.destination_url) + '</div></div>'
+      + '<div class="item-creator">' + escHtml(r.creator) + '</div>'
+      + '<div style="display:flex;gap:6px;">'
+      + '<button class="btn btn-outline btn-sm" data-qr-id="' + r.id + '" data-title="' + escHtml(r.title) + '" onclick="downloadListQR(this.dataset.qrId,this.dataset.title,this)">DL</button>'
+      + '<button class="btn btn-outline btn-sm" onclick="toggleEdit(\'' + r.id + '\')">編集</button>'
+      + '</div></div>'
+      + '<div class="edit-panel" id="edit-' + r.id + '">'
+      + '<div class="edit-panel-inner">'
+      + '<div class="field"><label>パスワード</label><input type="password" id="pw-' + r.id + '" placeholder="作成時のパスワード"></div>'
+      + '<div class="field"><label>新しい遷移先 URL</label><input type="url" id="newurl-' + r.id + '" placeholder="https://..."></div>'
+      + '<button class="btn btn-dark btn-sm" onclick="saveEdit(\'' + r.id + '\')">保存</button>'
+      + '</div><div class="msg hidden" id="msg-' + r.id + '"></div></div></div>';
+  }
+
+  function renderBlockCard(r) {
+    return '<div class="qr-block-card">'
+      + '<div class="block-title">' + escHtml(r.channel_name || '—') + '</div>'
+      + '<div style="font-size:12px;color:#666;text-align:center;word-break:break-all;width:100%;">' + escHtml(r.title) + '</div>'
+      + '<img class="block-qr" data-qr-target="' + r.id + '" src="" alt="QR">'
+      + '<div class="block-creator">' + escHtml(r.creator) + '</div>'
+      + '<div class="block-btns">'
+      + '<button class="btn btn-outline btn-sm" data-qr-id="' + r.id + '" data-title="' + escHtml(r.title) + '" onclick="downloadListQR(this.dataset.qrId,this.dataset.title,this)">DL</button>'
+      + '<button class="btn btn-outline btn-sm" onclick="toggleEdit(\'' + r.id + '\')">編集</button>'
+      + '</div>'
+      + '<div class="edit-panel" id="edit-' + r.id + '" style="width:100%;">'
+      + '<div style="display:flex;flex-direction:column;gap:8px;">'
+      + '<input type="password" id="pw-' + r.id + '" placeholder="パスワード" style="padding:7px 10px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:13px;width:100%;">'
+      + '<input type="url" id="newurl-' + r.id + '" placeholder="新しいURL" style="padding:7px 10px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:13px;width:100%;">'
+      + '<button class="btn btn-dark btn-sm btn-full" onclick="saveEdit(\'' + r.id + '\')">保存</button>'
+      + '</div><div class="msg hidden" id="msg-' + r.id + '"></div></div></div>';
   }
 
   function toggleEdit(id) {
@@ -499,7 +588,6 @@
     const password = document.getElementById('pw-' + id).value.trim();
     const new_url = document.getElementById('newurl-' + id).value.trim();
     const msg = document.getElementById('msg-' + id);
-
     msg.classList.add('hidden');
     try {
       const res = await fetch('/api/edit', {
@@ -515,7 +603,8 @@
         msg.textContent = '✓ 変更しました！QRコードはそのまま使えます。';
         const item = allItems.find(r => r.id === id);
         if (item) item.destination_url = new_url;
-        document.querySelector(`#item-${id} .item-url`).textContent = new_url;
+        const urlEl = document.querySelector('#item-' + id + ' .item-url');
+        if (urlEl) urlEl.textContent = new_url;
         document.getElementById('newurl-' + id).value = '';
       } else {
         msg.classList.add('msg-err');
@@ -535,10 +624,8 @@
     const password = document.getElementById('c-pw').value.trim();
     const creator = document.getElementById('c-creator').value.trim();
     const btn = document.getElementById('create-btn');
-
     btn.disabled = true;
     btn.textContent = '生成中...';
-
     try {
       const res = await fetch('/api/create', {
         method: 'POST',
@@ -547,11 +634,9 @@
       });
       const d = await res.json();
       if (d.error) { alert(d.error); return; }
-
       currentQrB64 = d.qr_image;
       currentId = d.id;
       currentTitle = d.title;
-
       document.getElementById('qr-img').src = 'data:image/png;base64,' + d.qr_image;
       document.getElementById('qr-id-display').textContent = d.id;
       document.getElementById('qr-url-display').textContent = d.redirect_url;
@@ -561,7 +646,6 @@
         const el = document.getElementById(id);
         if (el) el.disabled = true;
       });
-
       loadList();
     } catch {
       alert('通信エラーが発生しました');
@@ -574,28 +658,32 @@
   function downloadQR() {
     const a = document.createElement('a');
     a.href = 'data:image/png;base64,' + currentQrB64;
-    a.download = `${currentTitle || currentId}.png`;
+    a.download = (currentTitle || currentId) + '.png';
     a.click();
   }
 
-  async function downloadListQR(id, title, btn) {
+  function downloadListQR(id, title, btn) {
     const orig = btn.textContent;
+    if (qrCache[id]) {
+      const a = document.createElement('a');
+      a.href = qrCache[id];
+      a.download = (title || id) + '.png';
+      a.click();
+      return;
+    }
     btn.disabled = true;
     btn.textContent = '…';
-    try {
-      const res = await fetch(`/api/qr/${id}`);
-      const d = await res.json();
-      if (d.error) { alert(d.error); return; }
-      const a = document.createElement('a');
-      a.href = 'data:image/png;base64,' + d.qr_image;
-      a.download = `${title || id}.png`;
-      a.click();
-    } catch {
-      alert('ダウンロードに失敗しました');
-    } finally {
+    QRCode.toDataURL(WORKER_BASE + id, { width: 400, margin: 2 }, function(err, url) {
       btn.disabled = false;
       btn.textContent = orig;
-    }
+      if (err) { alert('QR生成に失敗しました'); return; }
+      qrCache[id] = url;
+      applyQR(id, url);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = (title || id) + '.png';
+      a.click();
+    });
   }
 
   function copyId() {
