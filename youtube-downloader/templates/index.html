@@ -454,15 +454,10 @@
   document.getElementById('cookie-cmd').textContent =
     `bash <(curl -s ${window.location.origin}/api/cookie-script)`;
 
-  // Cookie管理
-  window.addEventListener('load', checkCookiesStatus);
-
+  // Cookie管理（Bot判定時のみ使用）
   async function checkCookiesStatus(refresh = false) {
     const badge = document.getElementById('cookie-badge');
     badge.textContent = '確認中...';
-    badge.className = 'c-badge';
-    badge.style.background = '#f0f0f0';
-    badge.style.color = '#888';
     try {
       const res = await fetch('/api/cookies/check' + (refresh ? '?refresh=1' : ''));
       const d = await res.json();
@@ -476,21 +471,13 @@
       badge.textContent = s.text;
       badge.style.background = s.bg;
       badge.style.color = s.color;
-      badge.className = 'c-badge';
 
-      const card = document.getElementById('cookie-card');
-      const fetchBtn = document.getElementById('fetch-btn');
       if (d.status === 'valid') {
-        card.classList.add('hidden');
-        fetchBtn.disabled = false;
-      } else {
-        card.classList.remove('hidden');
-        fetchBtn.disabled = (d.status === 'expired' || d.status === 'none');
-        if (d.status === 'expired') showBotAlert();
+        document.getElementById('cookie-card').classList.add('hidden');
+        if (currentUrl) document.getElementById('dl-btn').disabled = false;
       }
     } catch {
       badge.textContent = '確認失敗';
-      badge.className = 'c-badge';
     }
   }
 
@@ -521,6 +508,7 @@
 
   function showBotAlert() {
     const card = document.getElementById('cookie-card');
+    card.classList.remove('hidden');
     card.classList.add('alert');
     card.scrollIntoView({ behavior: 'smooth', block: 'center' });
     setTimeout(() => card.classList.remove('alert'), 1000);
