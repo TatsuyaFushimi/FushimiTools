@@ -28,10 +28,22 @@ def _init_cookies():
 _init_cookies()
 
 
+def _ffmpeg_location():
+    # PyInstallerバンドル環境ではPATHが通らないため明示的に探す
+    for path in ['/opt/homebrew/bin/ffmpeg', '/usr/local/bin/ffmpeg', '/usr/bin/ffmpeg']:
+        if os.path.exists(path):
+            return os.path.dirname(path)
+    found = shutil.which('ffmpeg')
+    return os.path.dirname(found) if found else None
+
+
 def _ydl_opts_base():
     opts = {'quiet': True, 'no_warnings': True}
     if os.path.exists(COOKIES_PATH):
         opts['cookiefile'] = COOKIES_PATH
+    loc = _ffmpeg_location()
+    if loc:
+        opts['ffmpeg_location'] = loc
     return opts
 
 
