@@ -2,7 +2,7 @@
 set -e
 cd "$(dirname "$0")"
 
-echo "=== Flare Transcript ビルド ==="
+echo "=== Flare Scribe ビルド ==="
 
 # venv
 if [ ! -d venv ]; then
@@ -14,10 +14,12 @@ pip install -q pyinstaller faster-whisper yt-dlp flask
 
 # ビルド
 venv/bin/pyinstaller \
-  --name "Flare Transcript" \
+  --name "Flare Scribe" \
   --windowed \
   --onedir \
+  --icon "static/icon.png" \
   --add-data "templates:templates" \
+  --add-data "static:static" \
   --collect-all faster_whisper \
   --collect-all ctranslate2 \
   --hidden-import faster_whisper \
@@ -27,6 +29,6 @@ venv/bin/pyinstaller \
 
 # zip化
 cd dist
-zip -r "../FlareTranscript-arm64.zip" "Flare Transcript.app"
+zip -r "../FlareScribe-arm64.zip" "Flare Scribe.app"
 echo ""
-echo "✅ ビルド完了: FlareTranscript-arm64.zip"
+echo "✅ ビルド完了: FlareScribe-arm64.zip"
