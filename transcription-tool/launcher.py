@@ -3,7 +3,6 @@ import os
 import threading
 import webbrowser
 import time
-import socket
 
 if getattr(sys, 'frozen', False):
     BASE_DIR = sys._MEIPASS
@@ -19,16 +18,19 @@ transcript_app.app.template_folder = os.path.join(BASE_DIR, 'templates')
 transcript_app.app.static_folder = os.path.join(BASE_DIR, 'static')
 
 
-def _find_free_port():
-    for p in range(5002, 5020):
-        try:
-            s = socket.socket()
-            s.bind(('127.0.0.1', p))
-            s.close()
-            return p
-        except OSError:
-            continue
-    return 5002
+PORT = 5002
+
+
+def _kill_existing(port):
+    import subprocess
+    try:
+        result = subprocess.run(['lsof', '-ti', f':{port}'], capture_output=True, text=True)
+        for pid in result.stdout.strip().split('\n'):
+            if pid.strip():
+                subprocess.run(['kill', '-9', pid.strip()], capture_output=True)
+        time.sleep(0.5)
+    except Exception:
+        pass
 
 
 def _open_browser(port):
@@ -43,6 +45,6 @@ def _open_browser(port):
 
 
 if __name__ == '__main__':
-    port = _find_free_port()
-    threading.Thread(target=_open_browser, args=(port,), daemon=True).start()
-    transcript_app.app.run(host='127.0.0.1', port=port, debug=False, use_reloader=False)
+    _kill_existing(PORT)
+    threading.Thread(target=_open_browser, args=(PORT,), daemon=True).start()
+    transcript_app.app.run(host='127.0.0.1', port=PORT, debug=False, use_reloader=False)
