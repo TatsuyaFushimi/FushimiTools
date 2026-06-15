@@ -240,10 +240,15 @@ def seed_test():
     import random
     from datetime import datetime, timedelta, timezone
 
-    result = supabase.table('qr_codes').select('id').eq('title', 'テスト２').execute()
-    if not result.data:
-        return jsonify({'error': 'テスト２ not found'}), 404
-    qr_id = result.data[0]['id']
+    qr_id = request.args.get('id')
+    if not qr_id:
+        for t in ['テスト２', 'テストデータ有']:
+            r = supabase.table('qr_codes').select('id').eq('title', t).execute()
+            if r.data:
+                qr_id = r.data[0]['id']
+                break
+    if not qr_id:
+        return jsonify({'error': 'QR not found'}), 404
 
     # タイトル更新
     supabase.table('qr_codes').update({'title': 'テストデータ有'}).eq('id', qr_id).execute()
