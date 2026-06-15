@@ -153,6 +153,21 @@ def list_qr():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/scan-counts')
+def scan_counts():
+    if not supabase:
+        return jsonify({}), 200
+    try:
+        result = supabase.table('qr_scans').select('qr_id').execute()
+        counts = {}
+        for row in result.data:
+            qr_id = row['qr_id']
+            counts[qr_id] = counts.get(qr_id, 0) + 1
+        return jsonify(counts)
+    except Exception:
+        return jsonify({}), 200
+
+
 @app.route('/api/edit', methods=['POST'])
 def edit_qr():
     if not supabase:

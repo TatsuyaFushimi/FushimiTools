@@ -201,6 +201,8 @@
     .item-url { font-size: 11px; color: #aaa; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px; }
     .item-creator { font-size: 12px; color: #666; white-space: nowrap; }
     .item-id { font-size: 11px; color: #bbb; font-family: monospace; }
+    .item-scan { font-size: 11px; color: #aaa; margin-top: 2px; }
+    .pdf-btn-row { display: flex; justify-content: flex-end; margin-top: 12px; }
 
     /* 編集パネル */
     .edit-panel {
@@ -431,6 +433,9 @@
       <span class="page-info" id="page-info"></span>
       <button class="page-btn" id="btn-next" onclick="goToPage(currentPage + 1)">次へ →</button>
     </div>
+    <div class="pdf-btn-row hidden" id="pdf-btn-row">
+      <button class="btn btn-outline btn-sm" onclick="exportPDF()">📄 検索結果詳細出力（PDF）</button>
+    </div>
   </div>
 </div>
 
@@ -443,6 +448,7 @@
   let currentPage = 0;
   let viewMode = 'list';
   let qrCache = {};
+  let scanCounts = {};
   let currentQrB64 = '';
   let currentId = '';
   let currentTitle = '';
@@ -451,8 +457,12 @@
 
   async function loadList() {
     try {
-      const res = await fetch('/api/list');
-      const d = await res.json();
+      const [listRes, countRes] = await Promise.all([
+        fetch('/api/list'),
+        fetch('/api/scan-counts'),
+      ]);
+      const d = await listRes.json();
+      scanCounts = await countRes.json();
       allItems = d.items || [];
       filteredItems = allItems.slice();
       renderList(filteredItems);
@@ -534,6 +544,7 @@
     nextBtn.disabled = currentPage >= totalPages - 1 || totalPages === 0;
     pageInfo.textContent = totalPages > 0 ? (currentPage + 1) + ' / ' + totalPages : '';
     pag.classList.toggle('hidden', totalPages <= 1);
+    document.getElementById('pdf-btn-row').classList.toggle('hidden', items.length === 0);
 
     if (!pageItems.length) {
       el.innerHTML = '<div class="empty-state">該当するQRコードがありません</div>';
@@ -554,7 +565,8 @@
       + '<img class="item-qr-thumb" data-qr-target="' + r.id + '" src="" alt="QR">'
       + '<span class="item-channel">' + escHtml(r.channel_name || '—') + '</span>'
       + '<div><div class="item-title">' + escHtml(r.title) + '</div>'
-      + '<div class="item-url">' + escHtml(r.destination_url) + '</div></div>'
+      + '<div class="item-url">' + escHtml(r.destination_url) + '</div>'
+      + '<div class="item-scan">読取件数：' + (scanCounts[r.id] || 0) + '件</div></div>'
       + '<div class="item-creator">' + escHtml(r.creator) + '</div>'
       + '<div style="display:flex;gap:6px;">'
       + '<button class="btn btn-outline btn-sm" data-qr-id="' + r.id + '" data-title="' + escHtml(r.title) + '" onclick="downloadListQR(this.dataset.qrId,this.dataset.title,this)">DL</button>'
@@ -574,6 +586,7 @@
       + '<div style="font-size:12px;color:#666;text-align:center;word-break:break-all;width:100%;">' + escHtml(r.title) + '</div>'
       + '<img class="block-qr" data-qr-target="' + r.id + '" src="" alt="QR">'
       + '<div class="block-creator">' + escHtml(r.creator) + '</div>'
+      + '<div class="item-scan">読取：' + (scanCounts[r.id] || 0) + '件</div>'
       + '<div class="block-btns">'
       + '<button class="btn btn-outline btn-sm" data-qr-id="' + r.id + '" data-title="' + escHtml(r.title) + '" onclick="downloadListQR(this.dataset.qrId,this.dataset.title,this)">DL</button>'
       + '<button class="btn btn-outline btn-sm" onclick="toggleEdit(\'' + r.id + '\')">編集</button>'
@@ -702,6 +715,49 @@
     currentQrB64 = '';
     currentId = '';
     currentTitle = '';
+  }
+
+  function exportPDF() {
+    const ch = escHtml(document.getElementById('s-channel').value || 'すべて');
+    const titleVal = escHtml(document.getElementById('s-title').value || '—');
+    const creatorVal = escHtml(document.getElementById('s-creator').value || '—');
+
+    const rows = filteredItems.map((r, i) => '<tr>'
+      + '<td style="text-align:center;">' + (i + 1) + '</td>'
+      + '<td>' + escHtml(r.channel_name || '—') + '</td>'
+      + '<td>' + escHtml(r.title) + '</td>'
+      + '<td>' + escHtml(r.creator || '—') + '</td>'
+      + '<td style="font-size:10px;word-break:break-all;">' + escHtml(r.destination_url) + '</td>'
+      + '<td>' + (r.created_at ? r.created_at.slice(0, 10) : '—') + '</td>'
+      + '<td style="text-align:center;">' + (scanCounts[r.id] || 0) + '件</td>'
+      + '</tr>').join('');
+
+    const html = '<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8">'
+      + '<title>Flare QR 検索結果レポート</title>'
+      + '<style>'
+      + 'body{font-family:-apple-system,"Hiragino Sans",sans-serif;padding:20px;font-size:12px;}'
+      + 'h2{font-size:16px;margin-bottom:8px;}'
+      + '.meta{color:#666;font-size:11px;margin-bottom:16px;line-height:1.8;}'
+      + 'table{width:100%;border-collapse:collapse;}'
+      + 'th,td{border:1px solid #ddd;padding:6px 8px;text-align:left;vertical-align:top;}'
+      + 'th{background:#111;color:#fff;font-size:11px;white-space:nowrap;}'
+      + '@media print{body{padding:0;}}'
+      + '</style></head><body>'
+      + '<h2>Flare QR 検索結果レポート</h2>'
+      + '<div class="meta">'
+      + '出力日時：' + new Date().toLocaleString('ja-JP') + '<br>'
+      + '検索条件：ch=' + ch + ' / タイトル=' + titleVal + ' / 作成者=' + creatorVal + '<br>'
+      + '件数：' + filteredItems.length + '件'
+      + '</div>'
+      + '<table><thead><tr>'
+      + '<th>#</th><th>ch名</th><th>タイトル</th><th>作成者</th><th>遷移先URL</th><th>作成日</th><th>読取件数</th>'
+      + '</tr></thead><tbody>' + rows + '</tbody></table>'
+      + '<script>window.onload=function(){window.print();}<\/script>'
+      + '</body></html>';
+
+    const w = window.open('', '_blank');
+    w.document.write(html);
+    w.document.close();
   }
 
   function escHtml(s) {
