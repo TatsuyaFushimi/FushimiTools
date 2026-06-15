@@ -168,6 +168,26 @@ def scan_counts():
         return jsonify({}), 200
 
 
+@app.route('/api/scan-stats')
+def scan_stats():
+    if not supabase:
+        return jsonify({}), 200
+    try:
+        result = supabase.table('qr_scans').select('qr_id,region,city').execute()
+        groups = {}
+        for row in result.data:
+            qid = row['qr_id']
+            if qid not in groups:
+                groups[qid] = []
+            groups[qid].append((row.get('region') or '', row.get('city') or ''))
+        stats = {}
+        for qid, pairs in groups.items():
+            stats[qid] = {'total': len(pairs), 'unique': len(set(pairs))}
+        return jsonify(stats)
+    except Exception:
+        return jsonify({}), 200
+
+
 @app.route('/api/scan-details')
 def scan_details():
     if not supabase:
