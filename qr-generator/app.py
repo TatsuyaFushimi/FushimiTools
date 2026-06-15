@@ -168,6 +168,25 @@ def scan_counts():
         return jsonify({}), 200
 
 
+@app.route('/api/scan-details')
+def scan_details():
+    if not supabase:
+        return jsonify([]), 200
+    ids = request.args.get('ids', '')
+    if not ids:
+        return jsonify([]), 200
+    try:
+        id_list = [i.strip() for i in ids.split(',') if i.strip()]
+        result = supabase.table('qr_scans') \
+            .select('qr_id,scanned_at,region,city,device_type') \
+            .in_('qr_id', id_list) \
+            .order('scanned_at', desc=True) \
+            .execute()
+        return jsonify(result.data)
+    except Exception:
+        return jsonify([]), 200
+
+
 @app.route('/api/edit', methods=['POST'])
 def edit_qr():
     if not supabase:
