@@ -7,7 +7,9 @@ import socket
 
 # PyInstallerバンドル時のリソースパスを解決
 if getattr(sys, 'frozen', False):
-    BASE_DIR = sys._MEIPASS
+    # macOS .app: datas land in Contents/Resources, not _MEIPASS (Contents/Frameworks)
+    _resources = os.path.join(os.path.dirname(os.path.dirname(sys.executable)), 'Resources')
+    BASE_DIR = _resources if os.path.isdir(os.path.join(_resources, 'templates')) else sys._MEIPASS
 else:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
