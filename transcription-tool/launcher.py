@@ -35,6 +35,22 @@ def _kill_existing(port):
         pass
 
 
+def _finish_launching():
+    """macOSにアプリ起動完了を通知してDockの跳ねを止める"""
+    try:
+        import ctypes, ctypes.util
+        objc = ctypes.cdll.LoadLibrary(ctypes.util.find_library('objc'))
+        objc.objc_getClass.restype = ctypes.c_void_p
+        objc.sel_registerName.restype = ctypes.c_void_p
+        objc.objc_msgSend.restype = ctypes.c_void_p
+        objc.objc_msgSend.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+        cls = objc.objc_getClass(b'NSApplication')
+        app = objc.objc_msgSend(cls, objc.sel_registerName(b'sharedApplication'))
+        objc.objc_msgSend(app, objc.sel_registerName(b'finishLaunching'))
+    except Exception:
+        pass
+
+
 def _open_browser(port):
     import urllib.request
     for _ in range(240):
@@ -47,6 +63,7 @@ def _open_browser(port):
 
 
 if __name__ == '__main__':
+    _finish_launching()
     _kill_existing(PORT)
     threading.Thread(target=_open_browser, args=(PORT,), daemon=True).start()
     transcript_app.app.run(host='127.0.0.1', port=PORT, debug=False, use_reloader=False)
