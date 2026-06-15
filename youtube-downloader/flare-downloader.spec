@@ -78,6 +78,5 @@ app = BUNDLE(
         'CFBundleShortVersionString': '1.0.0',
         'NSHighResolutionCapable': True,
         'NSRequiresAquaSystemAppearance': False,
-        'LSUIElement': True,
     },
 )

@@ -27,13 +27,6 @@ venv/bin/pyinstaller \
   --hidden-import yt_dlp \
   launcher.py
 
-# LSUIElement追加（バックグラウンドアプリ化→Dockで跳ね続けない）
-/usr/libexec/PlistBuddy -c "Add :LSUIElement bool true" "dist/Flare Scribe.app/Contents/Info.plist" 2>/dev/null || \
-/usr/libexec/PlistBuddy -c "Set :LSUIElement true" "dist/Flare Scribe.app/Contents/Info.plist"
-
-# Info.plist変更後にアドホック再署名（未署名のまま壊れていないと認識させる）
-codesign --force --deep --sign - "dist/Flare Scribe.app"
-
 # zip化
 cd dist
 zip -r "../FlareScribe-arm64.zip" "Flare Scribe.app"
