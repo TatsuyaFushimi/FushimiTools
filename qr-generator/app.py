@@ -240,57 +240,57 @@ def seed_test():
     import random
     from datetime import datetime, timedelta, timezone
 
-    qr_id = request.args.get('id')
-    if not qr_id:
-        for t in ['テスト２', 'テストデータ有']:
-            r = supabase.table('qr_codes').select('id').eq('title', t).execute()
-            if r.data:
-                qr_id = r.data[0]['id']
-                break
-    if not qr_id:
-        return jsonify({'error': 'QR not found'}), 404
+    try:
+        qr_id = request.args.get('id')
+        if not qr_id:
+            for t in ['テスト２', 'テストデータ有']:
+                r = supabase.table('qr_codes').select('id').eq('title', t).execute()
+                if r.data:
+                    qr_id = r.data[0]['id']
+                    break
+        if not qr_id:
+            return jsonify({'error': 'QR not found'}), 404
 
-    # タイトル更新
-    supabase.table('qr_codes').update({'title': 'テストデータ有'}).eq('id', qr_id).execute()
+        supabase.table('qr_codes').update({'title': 'テストデータ有'}).eq('id', qr_id).execute()
 
-    # 重複挿入防止
-    existing = supabase.table('qr_scans').select('id').eq('qr_id', qr_id).execute()
-    if len(existing.data) >= 50:
-        return jsonify({'ok': True, 'skipped': True, 'reason': 'already seeded', 'count': len(existing.data)})
+        existing = supabase.table('qr_scans').select('id').eq('qr_id', qr_id).execute()
+        if len(existing.data) >= 50:
+            return jsonify({'ok': True, 'skipped': True, 'reason': 'already seeded', 'count': len(existing.data)})
 
-    regions = [
-        ('Tokyo', '新宿区'), ('Tokyo', '渋谷区'), ('Tokyo', '港区'), ('Tokyo', '品川区'), ('Tokyo', '世田谷区'),
-        ('Osaka', '大阪市北区'), ('Osaka', '大阪市中央区'), ('Osaka', '堺市'),
-        ('Aichi', '名古屋市中区'), ('Aichi', '名古屋市千種区'), ('Aichi', '豊田市'),
-        ('Fukuoka', '福岡市博多区'), ('Fukuoka', '福岡市中央区'),
-        ('Kanagawa', '横浜市西区'), ('Kanagawa', '川崎市'),
-        ('Saitama', 'さいたま市大宮区'),
-        ('Chiba', '千葉市中央区'),
-        ('Hokkaido', '札幌市中央区'),
-        ('Hyogo', '神戸市中央区'),
-        ('Kyoto', '京都市中京区'),
-    ]
-    devices = ['モバイル'] * 7 + ['PC'] * 3
+        regions = [
+            ('Tokyo', '新宿区'), ('Tokyo', '渋谷区'), ('Tokyo', '港区'), ('Tokyo', '品川区'), ('Tokyo', '世田谷区'),
+            ('Osaka', '大阪市北区'), ('Osaka', '大阪市中央区'), ('Osaka', '堺市'),
+            ('Aichi', '名古屋市中区'), ('Aichi', '名古屋市千種区'), ('Aichi', '豊田市'),
+            ('Fukuoka', '福岡市博多区'), ('Fukuoka', '福岡市中央区'),
+            ('Kanagawa', '横浜市西区'), ('Kanagawa', '川崎市'),
+            ('Saitama', 'さいたま市大宮区'),
+            ('Chiba', '千葉市中央区'),
+            ('Hokkaido', '札幌市中央区'),
+            ('Hyogo', '神戸市中央区'),
+            ('Kyoto', '京都市中京区'),
+        ]
+        devices = ['モバイル'] * 7 + ['PC'] * 3
 
-    now = datetime.now(timezone.utc)
-    records = []
-    for i in range(100):
-        # 直近ほど多くなるよう重み付け
-        days_ago = int(random.triangular(0, 60, 5))
-        hours_ago = random.randint(0, 23)
-        minutes_ago = random.randint(0, 59)
-        dt = now - timedelta(days=days_ago, hours=hours_ago, minutes=minutes_ago)
-        region, city = random.choice(regions)
-        records.append({
-            'qr_id': qr_id,
-            'scanned_at': dt.isoformat(),
-            'region': region,
-            'city': city,
-            'device_type': random.choice(devices),
-        })
+        now = datetime.now(timezone.utc)
+        records = []
+        for i in range(100):
+            days_ago = int(random.triangular(0, 60, 5))
+            hours_ago = random.randint(0, 23)
+            minutes_ago = random.randint(0, 59)
+            dt = now - timedelta(days=days_ago, hours=hours_ago, minutes=minutes_ago)
+            region, city = random.choice(regions)
+            records.append({
+                'qr_id': qr_id,
+                'scanned_at': dt.strftime('%Y-%m-%dT%H:%M:%S+00:00'),
+                'region': region,
+                'city': city,
+                'device_type': random.choice(devices),
+            })
 
-    supabase.table('qr_scans').insert(records).execute()
-    return jsonify({'ok': True, 'qr_id': qr_id, 'inserted': len(records), 'title': 'テストデータ有'})
+        supabase.table('qr_scans').insert(records).execute()
+        return jsonify({'ok': True, 'qr_id': qr_id, 'inserted': len(records), 'title': 'テストデータ有'})
+    except Exception as e:
+        return jsonify({'error': str(e), 'type': type(e).__name__}), 500
 
 
 if __name__ == '__main__':
