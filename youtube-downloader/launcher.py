@@ -1,7 +1,7 @@
 import sys
 import os
+import subprocess
 import threading
-import webbrowser
 import time
 import socket
 
@@ -44,7 +44,7 @@ def _open_browser(port):
             break
         except Exception:
             time.sleep(0.5)
-    webbrowser.open(f'http://localhost:{port}')
+    subprocess.run(['open', f'http://localhost:{port}'])
 
 
 if __name__ == '__main__':
