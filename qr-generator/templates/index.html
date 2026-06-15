@@ -722,11 +722,9 @@
     const titleVal = escHtml(document.getElementById('s-title').value || '—');
     const creatorVal = escHtml(document.getElementById('s-creator').value || '—');
 
-    // QRマップ（id→タイトル/ch名）
     const qrMap = {};
     filteredItems.forEach(r => { qrMap[r.id] = r; });
 
-    // スキャン明細を取得
     const ids = filteredItems.map(r => r.id).join(',');
     let scans = [];
     try {
@@ -734,7 +732,30 @@
       scans = await res.json();
     } catch {}
 
-    // ① サマリー表
+    // 集計
+    const dailyMap = {}, regionMap = {}, deviceMap = {};
+    scans.forEach(s => {
+      const date   = s.scanned_at ? s.scanned_at.slice(0, 10) : '不明';
+      const region = s.region || '不明';
+      const device = s.device_type || '不明';
+      dailyMap[date]   = (dailyMap[date]   || 0) + 1;
+      regionMap[region] = (regionMap[region] || 0) + 1;
+      deviceMap[device] = (deviceMap[device] || 0) + 1;
+    });
+    const dailyLabels    = Object.keys(dailyMap).sort();
+    const dailyData      = dailyLabels.map(d => dailyMap[d]);
+    const regionEntries  = Object.entries(regionMap).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    const deviceEntries  = Object.entries(deviceMap).sort((a,b)=>b[1]-a[1]);
+    const uniqueLocations = new Set(scans.map(s=>s.region).filter(Boolean)).size;
+    const uniqueDevices  = Object.keys(deviceMap).length;
+
+    const chartJson = JSON.stringify({
+      daily:  { labels: dailyLabels,                    data: dailyData },
+      region: { labels: regionEntries.map(e=>e[0]),    data: regionEntries.map(e=>e[1]) },
+      device: { labels: deviceEntries.map(e=>e[0]),    data: deviceEntries.map(e=>e[1]) },
+    });
+
+    // サマリー表
     const summaryRows = filteredItems.map((r, i) => '<tr>'
       + '<td style="text-align:center;">' + (i + 1) + '</td>'
       + '<td>' + escHtml(r.channel_name || '—') + '</td>'
@@ -745,7 +766,7 @@
       + '<td style="text-align:center;">' + (scanCounts[r.id] || 0) + '件</td>'
       + '</tr>').join('');
 
-    // ② 全スキャン明細表
+    // 明細表
     const detailRows = scans.map((s, i) => {
       const qr = qrMap[s.qr_id] || {};
       const dt = s.scanned_at ? new Date(s.scanned_at).toLocaleString('ja-JP') : '—';
@@ -761,34 +782,62 @@
     }).join('');
 
     const now = new Date().toLocaleString('ja-JP');
+
     const html = '<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8">'
-      + '<title>Flare QR 検索結果レポート</title>'
+      + '<title>Flare QR 分析レポート</title>'
+      + '<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"><\/script>'
       + '<style>'
-      + 'body{font-family:-apple-system,"Hiragino Sans",sans-serif;padding:20px;font-size:12px;}'
-      + 'h2{font-size:16px;margin-bottom:6px;}'
-      + 'h3{font-size:13px;margin:20px 0 8px;color:#333;border-bottom:1px solid #ddd;padding-bottom:4px;}'
-      + '.meta{color:#666;font-size:11px;margin-bottom:14px;line-height:1.8;}'
-      + 'table{width:100%;border-collapse:collapse;margin-bottom:8px;}'
-      + 'th,td{border:1px solid #ddd;padding:5px 7px;text-align:left;vertical-align:top;}'
-      + 'th{background:#111;color:#fff;font-size:11px;white-space:nowrap;}'
+      + 'body{font-family:-apple-system,"Hiragino Sans",sans-serif;padding:24px;font-size:12px;color:#111;}'
+      + 'h1{font-size:20px;font-weight:800;margin-bottom:4px;}'
+      + 'h2{font-size:13px;font-weight:700;margin:28px 0 10px;border-bottom:2px solid #111;padding-bottom:5px;}'
+      + '.meta{color:#999;font-size:11px;margin-bottom:22px;}'
+      + '.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;}'
+      + '.kpi{background:#f5f5f5;border-radius:12px;padding:14px 18px;}'
+      + '.kpi .lbl{font-size:11px;color:#888;margin-bottom:4px;}'
+      + '.kpi .val{font-size:30px;font-weight:800;line-height:1;}'
+      + '.chart-full{background:#f5f5f5;border-radius:12px;padding:16px;margin-bottom:20px;}'
+      + '.chart-full h3{font-size:11px;color:#666;margin-bottom:12px;font-weight:600;letter-spacing:.3px;}'
+      + '.chart-row{display:grid;grid-template-columns:3fr 2fr;gap:16px;margin-bottom:28px;}'
+      + '.chart-box{background:#f5f5f5;border-radius:12px;padding:16px;}'
+      + '.chart-box h3{font-size:11px;color:#666;margin-bottom:12px;font-weight:600;}'
+      + 'table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:8px;}'
+      + 'th,td{border:1px solid #e5e5e5;padding:5px 8px;text-align:left;vertical-align:top;}'
+      + 'th{background:#111;color:#fff;font-size:10px;white-space:nowrap;}'
       + 'tr:nth-child(even){background:#fafafa;}'
-      + '@media print{body{padding:0;}.no-break{page-break-inside:avoid;}}'
+      + '.print-btn{position:fixed;bottom:20px;right:20px;background:#111;color:#fff;border:none;padding:11px 22px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;box-shadow:0 4px 16px rgba(0,0,0,.2);}'
+      + '@media print{.print-btn{display:none;}canvas{max-width:100%!important;}}'
       + '</style></head><body>'
-      + '<h2>Flare QR 検索結果レポート</h2>'
-      + '<div class="meta">'
-      + '出力日時：' + now + '<br>'
-      + '検索条件：ch=' + ch + ' / タイトル=' + titleVal + ' / 作成者=' + creatorVal + '<br>'
-      + 'QRコード：' + filteredItems.length + '件　／　総読取数：' + scans.length + '件'
+      + '<h1>Flare QR 分析レポート</h1>'
+      + '<div class="meta">出力日時：' + now + '　｜　検索条件：ch=' + ch + ' / タイトル=' + titleVal + ' / 作成者=' + creatorVal + '</div>'
+      + '<div class="kpi-row">'
+      + '<div class="kpi"><div class="lbl">合計スキャン数</div><div class="val">' + scans.length + '</div></div>'
+      + '<div class="kpi"><div class="lbl">QRコード数</div><div class="val">' + filteredItems.length + '</div></div>'
+      + '<div class="kpi"><div class="lbl">地域数</div><div class="val">' + uniqueLocations + '</div></div>'
+      + '<div class="kpi"><div class="lbl">デバイス種別</div><div class="val">' + uniqueDevices + '</div></div>'
       + '</div>'
-      + '<h3>① QRコード一覧（読取件数サマリー）</h3>'
+      + '<div class="chart-full"><h3>スキャン / 日別</h3><canvas id="c-daily" height="70"></canvas></div>'
+      + '<div class="chart-row">'
+      + '<div class="chart-box"><h3>地域別スキャン数（上位10）</h3><canvas id="c-region"></canvas></div>'
+      + '<div class="chart-box"><h3>デバイス別</h3><canvas id="c-device"></canvas></div>'
+      + '</div>'
+      + '<h2>① QRコード一覧（読取件数サマリー）</h2>'
       + '<table><thead><tr><th>#</th><th>ch名</th><th>タイトル</th><th>作成者</th><th>遷移先URL</th><th>作成日</th><th>読取件数</th></tr></thead>'
       + '<tbody>' + summaryRows + '</tbody></table>'
-      + '<h3>② 全読取明細（' + scans.length + '件）</h3>'
+      + '<h2>② 全読取明細（' + scans.length + '件）</h2>'
       + (scans.length
         ? '<table><thead><tr><th>#</th><th>ch名</th><th>タイトル</th><th>読取日時</th><th>地域</th><th>市区町村</th><th>デバイス</th></tr></thead>'
           + '<tbody>' + detailRows + '</tbody></table>'
-        : '<p style="color:#aaa;font-size:11px;">読取データがありません（Supabase設定完了後に記録されます）</p>')
-      + '<script>window.onload=function(){window.print();}<\/script>'
+        : '<p style="color:#aaa;padding:16px 0;">読取データがありません（Worker・Supabase設定後に記録されます）</p>')
+      + '<button class="print-btn" onclick="window.print()">🖨 印刷 / PDF保存</button>'
+      + '<script>'
+      + 'var D=' + chartJson + ';'
+      + 'window.addEventListener("load",function(){'
+      + 'var purple="#7c3aed",light="rgba(124,58,237,0.12)";'
+      + 'new Chart(document.getElementById("c-daily"),{type:"line",data:{labels:D.daily.labels,datasets:[{label:"スキャン数",data:D.daily.data,borderColor:purple,backgroundColor:light,tension:0.35,fill:true,pointRadius:3,pointBackgroundColor:purple}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1,precision:0}}}}});'
+      + 'new Chart(document.getElementById("c-region"),{type:"bar",data:{labels:D.region.labels,datasets:[{data:D.region.data,backgroundColor:purple,borderRadius:4}]},options:{indexAxis:"y",plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{precision:0}}}}});'
+      + 'new Chart(document.getElementById("c-device"),{type:"doughnut",data:{labels:D.device.labels,datasets:[{data:D.device.data,backgroundColor:[purple,"#a78bfa","#c4b5fd","#ddd6fe"]}]},options:{plugins:{legend:{position:"bottom"}}}});'
+      + '});'
+      + '<\/script>'
       + '</body></html>';
 
     const w = window.open('', '_blank');
