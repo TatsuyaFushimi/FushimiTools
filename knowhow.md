@@ -51,6 +51,19 @@
 
 ---
 
+## Premiere Pro エクステンション開発
+
+- **方式**: UXP（2022以降）を採用。CEP は廃止予定なので使わない
+- **配布**: `.ccx` ファイルをダブルクリックで社内インストール。Creative Cloud があれば追加ソフト不要
+- **開発ツール**: Adobe UXP Developer Tools（Creative Cloud からインストール）＋ `@adobe/uxp-cli`
+- **パッケージ化**: `uxp plugin package` → `dist/*.ccx` が生成される
+- **manifest.json の `id`**: 一度決めたら変えない。`com.busoken.*` で統一
+- **API**: `app.project`、`app.project.rootItem`、`createBin()` 等。詳細は仕様書参照
+- **デバッグ**: UXP Developer Tools の「Logs」タブ。`console.log()` が使える
+- 詳細は [仕様書/premiere-extension.md](仕様書/premiere-extension.md) に集約
+
+---
+
 ## 要望パターンと対応メモ
 
 *ツールを作るたびに追記していく*
