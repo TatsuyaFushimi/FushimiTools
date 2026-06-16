@@ -3,11 +3,24 @@
 ## 概要
 
 Adobe Premiere Pro 内で動作するパネル型エクステンション。  
-社内向け `.ccx` ファイル配布。機能内容は未定（随時更新）。
+**Google Drive に置いたモーショングラフィックテンプレート（.mogrt）をパネルから直接 Premiere に読み込める**ようにする。  
+社内向け `.ccx` ファイル配布。
 
-- **AI必要**: 機能次第（基本不要）
+- **AI必要**: なし
 - **配布方法**: `.ccx` ファイルを共有 → 手動インストール
 - **対象バージョン**: Premiere Pro 2022（v22.0）以降
+
+### ユーザー体験イメージ
+
+```
+1. Premiere でパネルを開く
+2. Drive 上の mogrt 一覧が自動表示される
+3. 使いたいテンプレートをクリック
+4. 自動ダウンロード → プロジェクトに取り込まれる
+5. タイムラインに配置して使う
+```
+
+**Drive フォルダに mogrt を追加するだけで全員に即反映される。**
 
 ---
 
@@ -161,8 +174,76 @@ uxp plugin package
 
 ---
 
+## Google Drive 連携（mogrt テンプレート配信）
+
+### 認証方式：サービスアカウント（確定）
+
+| 方式 | 概要 | 採用 |
+|------|------|------|
+| **サービスアカウント** | Google が発行する専用アカウントで Drive を読み取り。ユーザーログイン不要 | ✅ |
+| OAuth 2.0 | ユーザーが Google ログイン | ❌ デスクトップUXPでは実装が複雑 |
+| 公開共有リンク | API キーのみ。誰でもアクセス可 | ❌ 社内ファイル向けに不向き |
+
+### セットアップ手順（開発時・初回のみ）
+
+1. [Google Cloud Console](https://console.cloud.google.com/) でプロジェクト作成
+2. 「Google Drive API」を有効化
+3. 「サービスアカウント」を作成 → JSON キーをダウンロード
+4. 社内の Google Drive フォルダを作成し、サービスアカウントのメールアドレスを **閲覧者** として共有
+5. JSON キーの内容をエクステンションの設定ファイルに埋め込む（またはRender等のバックエンド経由）
+
+### Drive API 呼び出しの流れ
+
+```javascript
+// 1. アクセストークン取得（サービスアカウントのJWTを使って）
+const token = await getServiceAccountToken(credentials);
+
+// 2. フォルダ内の mogrt 一覧を取得
+const folderId = 'YOUR_DRIVE_FOLDER_ID';
+const res = await fetch(
+  `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents+and+name+contains+'.mogrt'&fields=files(id,name,modifiedTime)`,
+  { headers: { Authorization: `Bearer ${token}` } }
+);
+const { files } = await res.json();
+
+// 3. ファイルをダウンロード
+const fileRes = await fetch(
+  `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+  { headers: { Authorization: `Bearer ${token}` } }
+);
+const buffer = await fileRes.arrayBuffer();
+
+// 4. ローカルに保存（UXP localFileSystem API）
+const folder = await fs.getTemporaryFolder();
+const file = await folder.createFile('template.mogrt', { overwrite: true });
+await file.write(buffer);
+
+// 5. Premiere に取り込む
+app.project.importFiles([file.nativePath]);
+```
+
+### Drive フォルダ管理ルール（運用）
+
+| ルール | 内容 |
+|--------|------|
+| フォルダ構成 | Drive 内に `mogrt/` フォルダを1つ作成。カテゴリはサブフォルダで管理 |
+| ファイル命名 | `[カテゴリ]_[テンプレート名].mogrt`（例: `title_opening-A.mogrt`） |
+| 更新方法 | Drive フォルダにファイルを追加・削除するだけ。エクステンション側は自動反映 |
+| アクセス権 | サービスアカウントのみ閲覧権限。社員は Drive への直アクセス不要 |
+
+### キーの管理方法（要検討）
+
+サービスアカウントの JSON キーは機密情報なので下記のいずれかで管理する：
+
+- **A. エクステンション内に直埋め込み**：簡単だが ccx ファイルを解凍すると見える。社内配布のみなら許容範囲
+- **B. Render 等のバックエンド経由**：エクステンション → 自社サーバー → Drive API。キーが外に出ない。推奨
+
+---
+
 ## 今後追加する項目
 
-- [ ] 機能確定後：機能仕様・画面設計
+- [ ] Drive フォルダ ID・サービスアカウント作成
+- [ ] JWT 認証ロジックの実装（UXP 内 or バックエンド経由か決定）
+- [ ] パネル UI デザイン（テンプレート一覧・プレビュー・読み込みボタン）
 - [ ] インストールマニュアル（社内向け）
 - [ ] バージョン管理ルール

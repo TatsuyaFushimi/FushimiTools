@@ -58,7 +58,9 @@
 - **開発ツール**: Adobe UXP Developer Tools（Creative Cloud からインストール）＋ `@adobe/uxp-cli`
 - **パッケージ化**: `uxp plugin package` → `dist/*.ccx` が生成される
 - **manifest.json の `id`**: 一度決めたら変えない。`com.busoken.*` で統一
-- **API**: `app.project`、`app.project.rootItem`、`createBin()` 等。詳細は仕様書参照
+- **API**: `app.project`、`app.project.rootItem`、`app.project.importFiles()` 等。詳細は仕様書参照
+- **Google Drive 連携**: サービスアカウント認証 → Drive API で mogrt 一覧取得 → ダウンロード → `importFiles()` でPremiere取込。UXPは `fetch` が使えるので可能
+- **キー管理**: サービスアカウントJSONは社内配布のみなら直埋め込みOK。外部公開するならバックエンド経由
 - **デバッグ**: UXP Developer Tools の「Logs」タブ。`console.log()` が使える
 - 詳細は [仕様書/premiere-extension.md](仕様書/premiere-extension.md) に集約
 

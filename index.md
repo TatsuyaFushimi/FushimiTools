@@ -17,8 +17,8 @@
 ## 開発予定・検討中
 
 ### Premiere Pro エクステンション
-- **概要**: Premiere Pro 内で動作するパネル型ツール（機能未定）
-- **AI必要**: 未定
+- **概要**: Google Drive の mogrt テンプレートを Premiere パネルから直接読み込めるツール
+- **AI必要**: なし
 - **配布方法**: `.ccx` ファイル → 社内インストール
 - **仕様書**: [仕様書/premiere-extension.md](仕様書/premiere-extension.md)
 
