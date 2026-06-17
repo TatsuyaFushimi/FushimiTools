@@ -9,17 +9,15 @@ function evalScript(script) {
   });
 }
 
-// ─── Node.js モジュール（importFile 時のみ使用）─────────────
-function getNodeModules() {
-  try {
-    return {
-      fs: require('fs'),
-      os: require('os'),
-      path: require('path'),
-    };
-  } catch (e) {
-    throw new Error('ファイル保存に失敗しました（Node.js 利用不可）: ' + e.message);
+// ─── ArrayBuffer → Base64 変換 ───────────────────────────
+function arrayBufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  const chunk = 8192;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
   }
+  return btoa(binary);
 }
 
 // ─── ファイル種別判定 ─────────────────────────────────────
@@ -236,16 +234,16 @@ async function importFile(index) {
     if (!res.ok) throw new Error(`ダウンロード失敗 (${res.status})`);
 
     const buffer = await res.arrayBuffer();
-    const bytes = new Uint8Array(buffer);
 
-    // 一時ディレクトリに保存（Node.js fs）
-    const { fs: nodefs, os, path: nodepath } = getNodeModules();
-    const tempDir = os.tmpdir();
-    const filePath = nodepath.join(tempDir, file.name);
-    nodefs.writeFileSync(filePath, Buffer.from(bytes));
+    // 一時ファイルに保存（CEP 組み込み fs API）
+    const safeName = file.name.replace(/[/\\?%*:|"<>]/g, '_');
+    const filePath = '/tmp/' + safeName;
+    const base64 = arrayBufferToBase64(buffer);
+    const writeResult = window.cep.fs.writeFile(filePath, base64, window.cep.fs.Base64);
+    if (writeResult.err !== 0) throw new Error('ファイル保存失敗: ' + (writeResult.desc || writeResult.err));
 
     // ExtendScript 経由で Premiere Pro に取り込み
-    const safePath = filePath.replace(/\\/g, '/').replace(/'/g, "\\'");
+    const safePath = filePath.replace(/'/g, "\\'");
     const result = await evalScript(`importFileToProject('${safePath}')`);
     const parsed = JSON.parse(result);
     if (parsed.error) throw new Error(parsed.error);
