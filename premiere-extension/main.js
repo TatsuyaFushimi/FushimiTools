@@ -9,15 +9,8 @@ function evalScript(script) {
   });
 }
 
-// ─── ArrayBuffer → Base64 変換 ───────────────────────────
-function arrayBufferToBase64(buffer) {
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  const chunk = 8192;
-  for (let i = 0; i < bytes.length; i += chunk) {
-    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
-  }
-  return btoa(binary);
+function escapeForJS(str) {
+  return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 }
 
 // ─── ファイル種別判定 ─────────────────────────────────────
@@ -212,19 +205,18 @@ function renderFiles(files) {
   }).join('');
 }
 
-// ─── ファイルダウンロード共通処理 ────────────────────────
+// ─── ファイルダウンロード（curl 経由）────────────────────
 async function downloadFileToTemp(file) {
   const downloadUrl =
     `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${apiKey}`;
-  const res = await fetch(downloadUrl);
-  if (!res.ok) throw new Error(`ダウンロード失敗 (${res.status})`);
-
-  const buffer = await res.arrayBuffer();
-  const safeName = file.name.replace(/[/\\?%*:|"<>]/g, '_');
+  const safeName = file.name.replace(/[/\\?%*:|"<>']/g, '_');
   const filePath = '/private/tmp/' + safeName;
-  const base64 = arrayBufferToBase64(buffer);
-  const writeResult = window.cep.fs.writeFile(filePath, base64, "base64");
-  if (writeResult.err !== 0) throw new Error('ファイル保存失敗: ' + (writeResult.desc || writeResult.err));
+
+  const result = await evalScript(
+    `downloadFileOnly('${escapeForJS(downloadUrl)}', '${escapeForJS(filePath)}')`
+  );
+  const parsed = JSON.parse(result);
+  if (parsed.error) throw new Error(parsed.error);
   return filePath;
 }
 
