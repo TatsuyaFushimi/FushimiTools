@@ -190,8 +190,11 @@ function renderFiles(files) {
       ? `https://drive.google.com/thumbnail?id=${file.id}&sz=w220`
       : null;
 
+    const isDraggable = info.canImport && info.type !== 'folder';
     return `
-      <div class="file-card" data-index="${i}" onclick="importFile(${i})">
+      <div class="file-card" data-index="${i}"
+           onclick="importFile(${i})"
+           ${isDraggable ? `draggable="true" ondragstart="handleDragStart(event,${i})"` : ''}>
         <div class="thumb">
           ${thumbUrl
             ? `<img src="${thumbUrl}"
@@ -209,7 +212,23 @@ function renderFiles(files) {
   }).join('');
 }
 
-// ─── クリック処理（フォルダ＝移動、ファイル＝取込）──────────
+// ─── ファイルダウンロード共通処理 ────────────────────────
+async function downloadFileToTemp(file) {
+  const downloadUrl =
+    `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${apiKey}`;
+  const res = await fetch(downloadUrl);
+  if (!res.ok) throw new Error(`ダウンロード失敗 (${res.status})`);
+
+  const buffer = await res.arrayBuffer();
+  const safeName = file.name.replace(/[/\\?%*:|"<>]/g, '_');
+  const filePath = '/private/tmp/' + safeName;
+  const base64 = arrayBufferToBase64(buffer);
+  const writeResult = window.cep.fs.writeFile(filePath, base64, window.cep.fs.Base64);
+  if (writeResult.err !== 0) throw new Error('ファイル保存失敗: ' + (writeResult.desc || writeResult.err));
+  return filePath;
+}
+
+// ─── クリック：フォルダ移動 or プロジェクトに追加 ──────────
 async function importFile(index) {
   const file = currentFiles[index];
   const info = getFileInfo(file);
@@ -219,30 +238,14 @@ async function importFile(index) {
     await loadFolder(file.id);
     return;
   }
-
   if (!info.canImport) return;
 
   const card = document.querySelector(`.file-card[data-index="${index}"]`);
   card.classList.add('importing');
-  showStatus(`ダウンロード中: ${file.name}`, 'loading');
+  showStatus(`取り込み中: ${file.name}`, 'loading');
 
   try {
-    // Drive からダウンロード
-    const downloadUrl =
-      `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${apiKey}`;
-    const res = await fetch(downloadUrl);
-    if (!res.ok) throw new Error(`ダウンロード失敗 (${res.status})`);
-
-    const buffer = await res.arrayBuffer();
-
-    // 一時ファイルに保存（CEP 組み込み fs API）
-    const safeName = file.name.replace(/[/\\?%*:|"<>]/g, '_');
-    const filePath = '/tmp/' + safeName;
-    const base64 = arrayBufferToBase64(buffer);
-    const writeResult = window.cep.fs.writeFile(filePath, base64, window.cep.fs.Base64);
-    if (writeResult.err !== 0) throw new Error('ファイル保存失敗: ' + (writeResult.desc || writeResult.err));
-
-    // ExtendScript 経由で Premiere Pro に取り込み
+    const filePath = await downloadFileToTemp(file);
     const safePath = filePath.replace(/'/g, "\\'");
     const result = await evalScript(`importFileToProject('${safePath}')`);
     const parsed = JSON.parse(result);
@@ -250,10 +253,32 @@ async function importFile(index) {
 
     card.classList.remove('importing');
     card.classList.add('imported');
-    showStatus(`✓ プロジェクトに追加しました`, 'success');
+    showStatus('✓ プロジェクトに追加しました', 'success');
     setTimeout(hideStatus, 2500);
   } catch (e) {
     card.classList.remove('importing');
+    showStatus(`エラー: ${e.message}`, 'error');
+  }
+}
+
+// ─── ドラッグ&ドロップ ────────────────────────────────────
+let lastMouseEvent = null;
+document.addEventListener('mousedown', e => { lastMouseEvent = e; });
+
+async function handleDragStart(event, index) {
+  event.preventDefault();
+  const file = currentFiles[index];
+  const info = getFileInfo(file);
+  if (!info.canImport || info.type === 'folder') return;
+
+  showStatus(`ドラッグ準備中: ${file.name}`, 'loading');
+  try {
+    const filePath = await downloadFileToTemp(file);
+    hideStatus();
+    if (window.cep && window.cep.dnd && lastMouseEvent) {
+      window.cep.dnd.initiateDrag(lastMouseEvent, [filePath], ['']);
+    }
+  } catch (e) {
     showStatus(`エラー: ${e.message}`, 'error');
   }
 }
