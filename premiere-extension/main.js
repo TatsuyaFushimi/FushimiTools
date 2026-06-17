@@ -64,6 +64,8 @@ function escHtml(str) {
 // ─── 状態 ────────────────────────────────────────────────
 let apiKey = '';
 let currentFiles = [];
+// フォルダ階層スタック: [{ id, name }, ...]
+let folderStack = [];
 
 // ─── 初期化 ──────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -119,18 +121,21 @@ async function loadFiles() {
   if (!folderId) return showStatus('正しい Google Drive フォルダURLを入力してください', 'error');
 
   localStorage.setItem('drive_folder_url', urlInput);
+  folderStack = [{ id: folderId, name: 'ルート' }];
+  await loadFolder(folderId);
+}
+
+async function loadFolder(folderId) {
   showStatus('読み込み中...', 'loading');
   document.getElementById('file-grid').innerHTML = '';
+  renderBreadcrumb();
 
   try {
     const files = await fetchDriveFiles(folderId);
     currentFiles = files;
     renderFiles(files);
-    if (files.length === 0) {
-      showStatus('ファイルが見つかりませんでした', 'info');
-    } else {
-      showStatus(`${files.length} 件`, 'info');
-    }
+    showStatus(`${files.length} 件`, 'info');
+    if (files.length === 0) showStatus('ファイルがありません', 'info');
   } catch (e) {
     showStatus(`エラー: ${e.message}`, 'error');
   }
@@ -139,7 +144,7 @@ async function loadFiles() {
 async function fetchDriveFiles(folderId) {
   const fields = 'files(id,name,mimeType,size,modifiedTime)';
   const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
-  const url = `https://www.googleapis.com/drive/v3/files?q=${q}&key=${apiKey}&fields=${fields}&pageSize=200&orderBy=name`;
+  const url = `https://www.googleapis.com/drive/v3/files?q=${q}&key=${apiKey}&fields=${fields}&pageSize=200&orderBy=folder,name`;
 
   const res = await fetch(url);
   if (!res.ok) {
@@ -147,7 +152,28 @@ async function fetchDriveFiles(folderId) {
     throw new Error(err.error?.message || `APIエラー (${res.status})`);
   }
   const data = await res.json();
-  return (data.files || []).filter(f => getFileInfo(f).type !== 'folder');
+  return data.files || [];
+}
+
+// ─── パンくず ─────────────────────────────────────────────
+function renderBreadcrumb() {
+  const el = document.getElementById('breadcrumb');
+  if (folderStack.length <= 1) {
+    el.classList.add('hidden');
+    return;
+  }
+  el.classList.remove('hidden');
+  el.innerHTML = folderStack.map((f, i) => {
+    if (i === folderStack.length - 1) {
+      return `<span class="bc-current">${escHtml(f.name)}</span>`;
+    }
+    return `<span class="bc-link" onclick="navigateTo(${i})">${escHtml(f.name)}</span><span class="bc-sep">›</span>`;
+  }).join('');
+}
+
+async function navigateTo(index) {
+  folderStack = folderStack.slice(0, index + 1);
+  await loadFolder(folderStack[folderStack.length - 1].id);
 }
 
 // ─── 描画 ─────────────────────────────────────────────────
@@ -185,10 +211,17 @@ function renderFiles(files) {
   }).join('');
 }
 
-// ─── Premiere Pro に取り込み ──────────────────────────────
+// ─── クリック処理（フォルダ＝移動、ファイル＝取込）──────────
 async function importFile(index) {
   const file = currentFiles[index];
   const info = getFileInfo(file);
+
+  if (info.type === 'folder') {
+    folderStack.push({ id: file.id, name: file.name });
+    await loadFolder(file.id);
+    return;
+  }
+
   if (!info.canImport) return;
 
   const card = document.querySelector(`.file-card[data-index="${index}"]`);

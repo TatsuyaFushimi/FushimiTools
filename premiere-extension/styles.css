@@ -114,6 +114,29 @@ body {
 .btn-primary:hover { background: #1084db; }
 .btn-primary:active { background: #005fa3; }
 
+/* ─── パンくず ─── */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 4px 6px;
+  background: #252525;
+  border: 1px solid #353535;
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+.bc-link {
+  color: #0078d4;
+  cursor: pointer;
+}
+.bc-link:hover { text-decoration: underline; }
+
+.bc-sep { color: #555; margin: 0 2px; }
+
+.bc-current { color: #aaa; }
+
 /* ─── ステータス ─── */
 .status {
   padding: 5px 10px;
