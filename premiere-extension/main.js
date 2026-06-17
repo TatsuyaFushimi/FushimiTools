@@ -1,13 +1,25 @@
-// CEP (Node.js available in panel context)
-const nodefs  = window.require('fs');
-const os      = window.require('os');
-const nodepath = window.require('path');
-
 // ─── ExtendScript ブリッジ ────────────────────────────────
 function evalScript(script) {
   return new Promise((resolve) => {
+    if (!window.__adobe_cep__) {
+      resolve(JSON.stringify({ error: 'CEP bridge not available' }));
+      return;
+    }
     window.__adobe_cep__.evalScript(script, resolve);
   });
+}
+
+// ─── Node.js モジュール（importFile 時のみ使用）─────────────
+function getNodeModules() {
+  try {
+    return {
+      fs: require('fs'),
+      os: require('os'),
+      path: require('path'),
+    };
+  } catch (e) {
+    throw new Error('ファイル保存に失敗しました（Node.js 利用不可）: ' + e.message);
+  }
 }
 
 // ─── ファイル種別判定 ─────────────────────────────────────
@@ -194,6 +206,7 @@ async function importFile(index) {
     const bytes = new Uint8Array(buffer);
 
     // 一時ディレクトリに保存（Node.js fs）
+    const { fs: nodefs, os, path: nodepath } = getNodeModules();
     const tempDir = os.tmpdir();
     const filePath = nodepath.join(tempDir, file.name);
     nodefs.writeFileSync(filePath, Buffer.from(bytes));
