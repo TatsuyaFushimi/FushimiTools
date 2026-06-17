@@ -16,10 +16,12 @@
 
 ## 開発予定・検討中
 
-### Premiere Pro エクステンション
-- **概要**: Google Drive の mogrt テンプレートを Premiere パネルから直接読み込めるツール
+### Drive Asset Browser（Premiere Pro エクステンション）
+- **概要**: Google Drive の素材（画像・動画・mogrt）を Premiere パネルから直接取り込めるツール
 - **AI必要**: なし
+- **フォルダ**: [./premiere-extension/](./premiere-extension/)
 - **配布方法**: `.ccx` ファイル → 社内インストール
+- **ステータス**: 開発済み・実機テスト待ち
 - **仕様書**: [仕様書/premiere-extension.md](仕様書/premiere-extension.md)
 
 ---

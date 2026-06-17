@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Drive Asset Browser</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+
+    <!-- ヘッダー -->
+    <div class="header">
+      <span class="header-title">Drive Asset Browser</span>
+      <button id="settings-toggle" class="icon-btn" title="設定">⚙</button>
+    </div>
+
+    <!-- 設定パネル（折りたたみ） -->
+    <div id="settings-panel" class="settings-panel hidden">
+      <div class="settings-row">
+        <label>Google API キー</label>
+        <input type="password" id="api-key" placeholder="AIza...">
+      </div>
+      <button id="save-settings" class="btn-primary">保存</button>
+    </div>
+
+    <!-- URL 入力 -->
+    <div class="url-section">
+      <input
+        type="text"
+        id="folder-url"
+        placeholder="Google Drive 共有フォルダの URL を貼り付け"
+      >
+      <button id="load-btn" class="btn-primary">読み込む</button>
+    </div>
+
+    <!-- ステータス -->
+    <div id="status" class="status hidden"></div>
+
+    <!-- ファイルグリッド -->
+    <div id="file-grid"></div>
+
+  </div>
+  <script src="main.js"></script>
+</body>
+</html>

@@ -240,10 +240,44 @@ app.project.importFiles([file.nativePath]);
 
 ---
 
-## 今後追加する項目
+---
 
-- [ ] Drive フォルダ ID・サービスアカウント作成
-- [ ] JWT 認証ロジックの実装（UXP 内 or バックエンド経由か決定）
-- [ ] パネル UI デザイン（テンプレート一覧・プレビュー・読み込みボタン）
-- [ ] インストールマニュアル（社内向け）
-- [ ] バージョン管理ルール
+## 初回セットアップ（開発・テスト手順）
+
+### 1. Google API キーを取得する
+
+1. [Google Cloud Console](https://console.cloud.google.com/) にアクセス
+2. プロジェクト作成 or 既存を選択
+3. 「APIとサービス」→「ライブラリ」→ **「Google Drive API」** を有効化
+4. 「認証情報」→「認証情報を作成」→ **「APIキー」**
+5. 発行されたキー（`AIza...`）をコピー
+6. 「APIキーを制限」→ Drive API のみに制限（推奨）
+
+### 2. Drive フォルダの共有設定
+
+1. 素材を入れる Google Drive フォルダを作成
+2. 右クリック →「共有」→「リンクをコピー」
+3. 共有設定を **「リンクを知っている全員が閲覧可」** に変更
+
+### 3. UXP Developer Tools でロード（開発中）
+
+1. Creative Cloud → **「UXP Developer Tool」** を起動
+2. 「Add Plugin」→ `premiere-extension/manifest.json` を選択
+3. Premiere Pro を起動した状態で「Load」
+4. メニュー「ウィンドウ」→「エクステンション」→「Drive Asset Browser」
+
+### 4. パネルの使い方
+
+1. ⚙ ボタンを押して API キーを入力 →「保存」
+2. Drive フォルダの共有 URL を貼り付け →「読み込む」
+3. ファイルがサムネイル付きで一覧表示される
+4. クリックで自動ダウンロード → Premiere プロジェクトに追加
+
+---
+
+## 今後の作業
+
+- [ ] Premiere Pro 上で実機テスト・動作確認
+- [ ] パッケージ化（`uxp plugin package` → `.ccx`）
+- [ ] 社内配布用インストールマニュアル作成
+- [ ] 必要に応じて機能追加（フォルダ絞り込み・検索など）
