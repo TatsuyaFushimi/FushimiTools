@@ -1,8 +1,16 @@
-const uxp = require('uxp');
-const { storage } = uxp;
-const fs = storage.localFileSystem;
+// CEP (Node.js available in panel context)
+const nodefs  = window.require('fs');
+const os      = window.require('os');
+const nodepath = window.require('path');
 
-// ─── ファイル種別判定 ───────────────────────────────────────
+// ─── ExtendScript ブリッジ ────────────────────────────────
+function evalScript(script) {
+  return new Promise((resolve) => {
+    window.__adobe_cep__.evalScript(script, resolve);
+  });
+}
+
+// ─── ファイル種別判定 ─────────────────────────────────────
 function getFileInfo(file) {
   const name = (file.name || '').toLowerCase();
   const mime = file.mimeType || '';
@@ -11,7 +19,7 @@ function getFileInfo(file) {
     return { type: 'mogrt', icon: '✨', label: 'MOGRT', canImport: true };
   if (mime.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|bmp|tiff|psd|ai|eps)$/.test(name))
     return { type: 'image', icon: '🖼', label: 'IMAGE', canImport: true };
-  if (mime.startsWith('video/') || /\.(mp4|mov|avi|mkv|wmv|flv|m4v|mxf|r3d|braw|arw)$/.test(name))
+  if (mime.startsWith('video/') || /\.(mp4|mov|avi|mkv|wmv|flv|m4v|mxf|r3d|braw)$/.test(name))
     return { type: 'video', icon: '🎬', label: 'VIDEO', canImport: true };
   if (mime.startsWith('audio/') || /\.(mp3|wav|aac|flac|aif|aiff)$/.test(name))
     return { type: 'audio', icon: '🎵', label: 'AUDIO', canImport: true };
@@ -60,7 +68,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Enter') loadFiles();
   });
 
-  // APIキー未設定なら設定パネルを開く
   if (!apiKey) toggleSettings();
 });
 
@@ -125,8 +132,7 @@ async function fetchDriveFiles(folderId) {
   const res = await fetch(url);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    const msg = err.error?.message || `APIエラー (${res.status})`;
-    throw new Error(msg);
+    throw new Error(err.error?.message || `APIエラー (${res.status})`);
   }
   const data = await res.json();
   return (data.files || []).filter(f => getFileInfo(f).type !== 'folder');
@@ -167,7 +173,7 @@ function renderFiles(files) {
   }).join('');
 }
 
-// ─── Premiere に取り込み ──────────────────────────────────
+// ─── Premiere Pro に取り込み ──────────────────────────────
 async function importFile(index) {
   const file = currentFiles[index];
   const info = getFileInfo(file);
@@ -185,14 +191,18 @@ async function importFile(index) {
     if (!res.ok) throw new Error(`ダウンロード失敗 (${res.status})`);
 
     const buffer = await res.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
 
-    // 一時フォルダに保存
-    const tempFolder = await fs.getTemporaryFolder();
-    const tempFile = await tempFolder.createFile(file.name, { overwrite: true });
-    await tempFile.write(buffer, { format: storage.formats.binary });
+    // 一時ディレクトリに保存（Node.js fs）
+    const tempDir = os.tmpdir();
+    const filePath = nodepath.join(tempDir, file.name);
+    nodefs.writeFileSync(filePath, Buffer.from(bytes));
 
-    // Premiere Pro に取り込み
-    app.project.importFiles([tempFile.nativePath], true);
+    // ExtendScript 経由で Premiere Pro に取り込み
+    const safePath = filePath.replace(/\\/g, '/').replace(/'/g, "\\'");
+    const result = await evalScript(`importFileToProject('${safePath}')`);
+    const parsed = JSON.parse(result);
+    if (parsed.error) throw new Error(parsed.error);
 
     card.classList.remove('importing');
     card.classList.add('imported');
