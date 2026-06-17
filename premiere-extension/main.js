@@ -223,7 +223,7 @@ async function downloadFileToTemp(file) {
   const safeName = file.name.replace(/[/\\?%*:|"<>]/g, '_');
   const filePath = '/private/tmp/' + safeName;
   const base64 = arrayBufferToBase64(buffer);
-  const writeResult = window.cep.fs.writeFile(filePath, base64, window.cep.fs.Base64);
+  const writeResult = window.cep.fs.writeFile(filePath, base64, "base64");
   if (writeResult.err !== 0) throw new Error('ファイル保存失敗: ' + (writeResult.desc || writeResult.err));
   return filePath;
 }
