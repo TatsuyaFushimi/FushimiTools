@@ -2,7 +2,7 @@
 <ExtensionManifest Version='7.0'
   ExtensionBundleId='com.busoken.drive-asset-browser'
   ExtensionBundleVersion='1.0.0'
-  ExtensionBundleName='Drive Asset Browser'>
+  ExtensionBundleName='Flare Drive Browser'>
   <ExtensionList>
     <Extension Id='com.busoken.drive-asset-browser.panel' Version='1.0.0'/>
   </ExtensionList>
@@ -32,7 +32,7 @@
         </Lifecycle>
         <UI>
           <Type>Panel</Type>
-          <Menu>Drive Asset Browser</Menu>
+          <Menu>Flare Drive Browser</Menu>
           <Geometry>
             <Size>
               <Width>320</Width>
