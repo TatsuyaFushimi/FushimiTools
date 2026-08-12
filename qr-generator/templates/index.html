@@ -515,7 +515,7 @@
   function generateQR(id) {
     if (qrCache[id]) { applyQR(id, qrCache[id]); return; }
     try {
-      var qr = new QRious({ value: WORKER_BASE + id, size: 400 });
+      var qr = new QRious({ value: WORKER_BASE + id, size: 400, padding: 48 });
       var url = qr.toDataURL();
       qrCache[id] = url;
       applyQR(id, url);
@@ -684,7 +684,7 @@
     var url = qrCache[id];
     if (!url) {
       try {
-        var qr = new QRious({ value: WORKER_BASE + id, size: 400 });
+        var qr = new QRious({ value: WORKER_BASE + id, size: 400, padding: 48 });
         url = qr.toDataURL();
         qrCache[id] = url;
         applyQR(id, url);
