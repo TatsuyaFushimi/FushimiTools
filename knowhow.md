@@ -531,3 +531,21 @@ Slackのinteraction payloadに含まれる`response_url`は、発行から30分�
 - アラート投稿先チャンネルを監視対象から明確に除外する
 
 Slackメッセージ検知機能を実装する際は、「自分（同じアプリ・同じトークン）が投稿する可能性のあるメッセージを、検知ロジックが誤って対象と判定しないか」を実装時点で必ず洗い出す。単発の正常系テストだけでは気づけず、エラー発生時の再帰的な挙動（アラート→誤検知→再アラート）まで含めて実機で検証する必要がある。
+
+---
+
+## ローカル開発からGoogle Sheets等にアクセスする際、gcloud CLIに追加スコープを指定すると認証がブロックされる（2026-08-21）
+
+### 問題
+
+ローカル開発環境からGoogle Sheets API等に書き込むためのアクセストークンを`gcloud auth application-default login --scopes=...`で取得しようとした際、`https://www.googleapis.com/auth/spreadsheets`や`https://www.googleapis.com/auth/drive.readonly`のような追加スコープを明示的に指定すると、Googleの認証画面で「このアプリはブロックされます」というエラーになる。
+
+### 原因
+
+gcloud CLIが使う既定のOAuthクライアント（`32555940559.apps.googleusercontent.com`）は、Google Cloud関連の標準スコープ（`cloud-platform`等）向けに検証されている。Sheets/Driveのような追加の機密スコープを付けてリクエストすると、Googleがそのクライアントを「未検証のセンシティブスコープ要求」として自動的にブロックする。
+
+### 対処
+
+`gcloud auth login`は追加スコープなし（デフォルトスコープのみ）で行う。Sheets等へのアクセスが必要な場合は「本番で使っているサービスアカウントになりすます」方式（`gcloud auth print-access-token --impersonate-service-account=<サービスアカウントのメールアドレス>`、要`roles/iam.serviceAccountTokenCreator`権限）を使う。これなら追加スコープの明示指定によるブロックを回避できる（サービスアカウントの権限に応じたトークンが発行される）。
+
+→ ローカル開発からGCP系APIの本番権限を借りて動作確認したい場面全般で応用できる汎用パターン。
