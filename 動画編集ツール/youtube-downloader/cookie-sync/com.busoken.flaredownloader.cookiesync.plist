@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  launchd用plist（サンプル）。
+  配置先: ~/Library/LaunchAgents/com.busoken.flaredownloader.cookiesync.plist
+  登録: launchctl load ~/Library/LaunchAgents/com.busoken.flaredownloader.cookiesync.plist
+  解除: launchctl unload ~/Library/LaunchAgents/com.busoken.flaredownloader.cookiesync.plist
+  毎日AM6:00に sync_cookie.py を実行する設定。
+  詳細はREADME.mdを参照。
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.busoken.flaredownloader.cookiesync</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/fushimi/Documents/ClaudeCode/Claude作業室/動画編集ツール/youtube-downloader/cookie-sync/venv/bin/python3</string>
+        <string>/Users/fushimi/Documents/ClaudeCode/Claude作業室/動画編集ツール/youtube-downloader/cookie-sync/sync_cookie.py</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>CF_ACCOUNT_ID</key>
+        <string>REPLACE_WITH_ACCOUNT_ID</string>
+        <key>CF_KV_NAMESPACE_ID</key>
+        <string>REPLACE_WITH_NAMESPACE_ID</string>
+    </dict>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>6</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/fushimi/Documents/ClaudeCode/Claude作業室/動画編集ツール/youtube-downloader/cookie-sync/cookiesync.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/fushimi/Documents/ClaudeCode/Claude作業室/動画編集ツール/youtube-downloader/cookie-sync/cookiesync.error.log</string>
+</dict>
+</plist>

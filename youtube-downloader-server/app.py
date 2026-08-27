@@ -7,6 +7,7 @@ import time
 import uuid
 import hashlib
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from datetime import datetime, timezone
 
 from flask import Flask, render_template, request, jsonify, send_file, after_this_request
@@ -78,36 +79,29 @@ def _user_id_from_email(email):
     return hashlib.sha256(email.encode('utf-8')).hexdigest()[:16]
 
 
-def _cookie_path(user_id):
-    return f'/tmp/yt_cookies_{user_id}.txt'
+def _shared_cookie_from_request():
+    return request.headers.get('X-Shared-Cookie', '')
 
 
-def _is_valid_netscape_cookie_file(raw: bytes) -> bool:
-    """Netscape cookie形式として最低限妥当かを軽くチェックする"""
+@contextmanager
+def _cookie_file_from_header():
+    """X-Shared-Cookieヘッダーの内容をリクエストごとの一時ファイルに書き出す。
+    ヘッダーが空/未設定ならNoneを返し、Cookie無しでyt-dlpを実行させる。
+    """
+    cookie_content = _shared_cookie_from_request()
+    if not cookie_content:
+        yield None
+        return
+    tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8')
     try:
-        text = raw.decode('utf-8')
-    except UnicodeDecodeError:
-        return False
-
-    lines = text.splitlines()
-    if not lines:
-        return False
-
-    first_line = lines[0].strip()
-    if not (first_line.startswith('# Netscape HTTP Cookie File') or first_line.startswith('# HTTP Cookie File')):
-        return False
-
-    has_data_row = False
-    for line in lines[1:]:
-        line = line.strip('\n')
-        if not line.strip() or line.startswith('#'):
-            continue
-        # domain, flag, path, secure, expiration, name, value の7列(タブ区切り)
-        if len(line.split('\t')) != 7:
-            return False
-        has_data_row = True
-
-    return has_data_row
+        tmp.write(cookie_content)
+        tmp.close()
+        yield tmp.name
+    finally:
+        try:
+            os.remove(tmp.name)
+        except OSError:
+            pass
 
 
 def _ffmpeg_location():
@@ -118,10 +112,9 @@ def _ffmpeg_location():
     return os.path.dirname(found) if found else None
 
 
-def _ydl_opts_base(user_id):
+def _ydl_opts_base(cookie_path=None):
     opts = {'quiet': True, 'no_warnings': True}
-    cookie_path = _cookie_path(user_id)
-    if os.path.exists(cookie_path):
+    if cookie_path:
         opts['cookiefile'] = cookie_path
     loc = _ffmpeg_location()
     if loc:
@@ -215,7 +208,6 @@ def get_info():
     user_email = _get_user_email()
     if not user_email:
         return jsonify({'error': 'X-User-Emailヘッダーが必要です'}), 400
-    user_id = _user_id_from_email(user_email)
 
     try:
         import yt_dlp
@@ -223,8 +215,9 @@ def get_info():
         if not url:
             return jsonify({'error': 'URLを入力してください'}), 400
 
-        with yt_dlp.YoutubeDL(_ydl_opts_base(user_id)) as ydl:
-            info = ydl.extract_info(url, download=False)
+        with _cookie_file_from_header() as cookie_path:
+            with yt_dlp.YoutubeDL(_ydl_opts_base(cookie_path)) as ydl:
+                info = ydl.extract_info(url, download=False)
 
         resolutions = set()
         for f in info.get('formats', []):
@@ -283,12 +276,15 @@ def start_download():
     with jobs_lock:
         jobs[job_id] = job
 
-    executor.submit(_do_download, job_id, url, height, weight, user_id)
+    # _do_downloadはリクエストコンテキスト外のスレッドで動くため、
+    # Cookie内容はここ(リクエストコンテキスト内)で読み取って渡す
+    cookie_content = _shared_cookie_from_request()
+    executor.submit(_do_download, job_id, url, height, weight, user_id, cookie_content)
 
     return jsonify({'job_id': job_id})
 
 
-def _do_download(job_id, url, height, weight, user_id):
+def _do_download(job_id, url, height, weight, user_id, cookie_content):
     import yt_dlp
 
     job = jobs[job_id]
@@ -304,8 +300,9 @@ def _do_download(job_id, url, height, weight, user_id):
     # (mkdtempの既定ランダムサフィックスは'_'を含みうるため、掃除スレッドでの
     #  ジョブID逆算がずれるのを避ける)
     tmpdir = os.path.join(tempfile.gettempdir(), f'{TMP_PREFIX}{job_id}')
-    os.makedirs(tmpdir, exist_ok=True)
-    job['tmpdir'] = tmpdir
+
+    # tmpdir配下に置くことで、成功/失敗いずれの経路のshutil.rmtree(tmpdir)でも一緒に消える
+    cookie_path = os.path.join(tmpdir, 'cookies.txt') if cookie_content else None
 
     # h264(avc1)を優先 → QuickTime互換。なければVP9等にフォールバック
     if not height:
@@ -337,7 +334,7 @@ def _do_download(job_id, url, height, weight, user_id):
             current['eta'] = 'マージ中...'
 
     opts = {
-        **_ydl_opts_base(user_id),
+        **_ydl_opts_base(cookie_path),
         'format': fmt,
         'outtmpl': os.path.join(tmpdir, '%(title)s.%(ext)s'),
         'merge_output_format': 'mp4',
@@ -345,6 +342,14 @@ def _do_download(job_id, url, height, weight, user_id):
     }
 
     try:
+        # makedirsとCookie書き込みもセマフォ確保後の処理なので、ここ(try)の中で行い
+        # 例外発生時にfinallyでセマフォが確実に解放されるようにする
+        os.makedirs(tmpdir, exist_ok=True)
+        job['tmpdir'] = tmpdir
+        if cookie_content:
+            with open(cookie_path, 'w', encoding='utf-8') as f:
+                f.write(cookie_content)
+
         with yt_dlp.YoutubeDL(opts) as ydl:
             info = ydl.extract_info(url, download=True)
             expected = ydl.prepare_filename(info)
@@ -429,37 +434,6 @@ def serve_file(job_id):
         return response
 
     return send_file(filepath, as_attachment=True, download_name=job['filename'])
-
-
-@app.route('/api/cookies', methods=['POST'])
-def upload_cookies():
-    user_email = _get_user_email()
-    if not user_email:
-        return jsonify({'error': 'X-User-Emailヘッダーが必要です'}), 400
-    user_id = _user_id_from_email(user_email)
-
-    if 'file' not in request.files:
-        return jsonify({'error': 'ファイルがありません'}), 400
-    f = request.files['file']
-    if not f.filename:
-        return jsonify({'error': 'ファイルが空です'}), 400
-
-    raw = f.read()
-    if not _is_valid_netscape_cookie_file(raw):
-        return jsonify({'error': 'Cookieファイルの形式が正しくありません（Netscape cookie形式のファイルをアップロードしてください）'}), 400
-
-    with open(_cookie_path(user_id), 'wb') as out:
-        out.write(raw)
-    return jsonify({'ok': True})
-
-
-@app.route('/api/cookies/status')
-def cookies_status():
-    user_email = _get_user_email()
-    if not user_email:
-        return jsonify({'error': 'X-User-Emailヘッダーが必要です'}), 400
-    user_id = _user_id_from_email(user_email)
-    return jsonify({'has_cookies': os.path.exists(_cookie_path(user_id))})
 
 
 def _check_job_timeouts(now):
