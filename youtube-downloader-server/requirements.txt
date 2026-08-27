@@ -1,0 +1,5 @@
+flask>=3.0
+yt-dlp>=2024.1.1
+gunicorn>=21.2
+google-api-python-client>=2.100
+google-auth>=2.23

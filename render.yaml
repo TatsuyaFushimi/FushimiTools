@@ -1,11 +1,15 @@
 services:
   - type: web
     name: fushimitools-youtube
-    runtime: python
-    rootDir: youtube-downloader
-    buildCommand: pip install -r requirements.txt
-    startCommand: pip install -U yt-dlp && python app.py
+    runtime: docker
+    rootDir: youtube-downloader-server
+    dockerfilePath: ./Dockerfile
     plan: free
+    envVars:
+      - key: WORKER_SHARED_SECRET
+        sync: false
+      - key: GOOGLE_SERVICE_ACCOUNT_JSON
+        sync: false
 
   - type: web
     name: fushimitools-qr

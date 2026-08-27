@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flare Downloader（チーム共有版）</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+      background: #f4f4f4;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .container { width: 100%; max-width: 640px; }
+
+    header { text-align: center; margin-bottom: 28px; }
+
+    h1 { font-size: 22px; font-weight: 700; color: #111; }
+
+    .subtitle { color: #888; font-size: 13px; margin-top: 4px; }
+
+    .card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 22px;
+      box-shadow: 0 1px 6px rgba(0,0,0,.08);
+      margin-bottom: 14px;
+    }
+
+    .input-row { display: flex; gap: 8px; }
+
+    input[type=text] {
+      flex: 1;
+      padding: 11px 14px;
+      border: 2px solid #e0e0e0;
+      border-radius: 9px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color .2s;
+      color: #111;
+    }
+
+    input[type=text]:focus { border-color: #FF0000; }
+
+    .btn {
+      padding: 11px 18px;
+      border: none; border-radius: 9px;
+      font-size: 14px; font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
+      white-space: nowrap;
+    }
+
+    .btn-red { background: #FF0000; color: #fff; }
+    .btn-red:hover { background: #d90000; }
+    .btn-red:disabled { background: #ccc; cursor: not-allowed; }
+
+    .video-row { display: flex; gap: 14px; }
+
+    .thumb-wrap { position: relative; flex-shrink: 0; }
+
+    .thumb-wrap img {
+      width: 176px;
+      aspect-ratio: 16/9;
+      object-fit: cover;
+      border-radius: 8px;
+      display: block;
+    }
+
+    .dur {
+      position: absolute; bottom: 4px; right: 4px;
+      background: rgba(0,0,0,.75); color: #fff;
+      font-size: 11px; padding: 2px 5px; border-radius: 3px;
+    }
+
+    .video-meta { min-width: 0; }
+
+    .video-meta h2 {
+      font-size: 15px; font-weight: 600; line-height: 1.45;
+      margin-bottom: 6px;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .uploader { color: #666; font-size: 13px; }
+
+    .dl-row { display: flex; gap: 8px; margin-top: 18px; }
+
+    select {
+      flex: 1;
+      padding: 11px 14px;
+      border: 2px solid #e0e0e0;
+      border-radius: 9px;
+      font-size: 14px;
+      background: #fff;
+      outline: none; cursor: pointer;
+      transition: border-color .2s;
+    }
+
+    select:focus { border-color: #FF0000; }
+
+    .progress-wrap { margin-top: 16px; }
+
+    .progress-meta {
+      display: flex; justify-content: space-between;
+      font-size: 12px; color: #888; margin-bottom: 7px;
+    }
+
+    .progress-bar {
+      height: 7px; background: #eee;
+      border-radius: 99px; overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%; background: #FF0000;
+      border-radius: 99px;
+      transition: width .35s ease;
+    }
+
+    .status-text { font-size: 12px; color: #888; margin-top: 7px; text-align: center; }
+
+    .success-banner {
+      margin-top: 14px; padding: 11px 14px;
+      background: #f0fff4; border-radius: 8px;
+      color: #1a7f37; font-size: 14px; font-weight: 600;
+      text-align: center;
+    }
+
+    .error-text { color: #c00; font-size: 13px; margin-top: 8px; }
+
+    .spinner {
+      display: inline-block;
+      width: 13px; height: 13px;
+      border: 2px solid rgba(255,255,255,.35);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .65s linear infinite;
+      vertical-align: middle;
+      margin-right: 5px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .hidden { display: none !important; }
+
+    .cookie-card { border: 2px solid #fff3cd; background: #fffbf0; }
+    .cookie-card.alert { border-color: #FF0000; animation: shake .35s; }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      25%      { transform: translateX(-5px); }
+      75%      { transform: translateX(5px); }
+    }
+    .cookie-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .cookie-title  { font-size: 14px; font-weight: 700; }
+    .cookie-desc   { font-size: 12px; color: #888; line-height: 1.7; margin-bottom: 12px; }
+    .drop-zone {
+      border: 2px dashed #ddd; border-radius: 9px; padding: 16px;
+      text-align: center; font-size: 13px; color: #aaa; cursor: pointer;
+      transition: border-color .15s, background .15s;
+    }
+    .drop-zone:hover, .drop-zone.drag-over { border-color: #FF0000; background: #fff5f5; color: #FF0000; }
+    .cookie-msg { font-size: 13px; margin-top: 10px; text-align: center; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>Flare Downloader（チーム共有版）</h1>
+    <p class="subtitle">URLを貼り付けて MP4 でダウンロード</p>
+  </header>
+
+  <!-- URL入力 -->
+  <div class="card">
+    <div class="input-row">
+      <input type="text" id="url-input" placeholder="https://www.youtube.com/watch?v=...">
+      <button class="btn btn-red" id="fetch-btn" onclick="fetchInfo()">情報取得</button>
+    </div>
+    <div id="fetch-error" class="error-text hidden"></div>
+  </div>
+
+  <!-- 動画情報＋DL -->
+  <div class="card hidden" id="video-card">
+    <div class="video-row">
+      <div class="thumb-wrap">
+        <img id="thumbnail" src="" alt="">
+        <span class="dur" id="duration"></span>
+      </div>
+      <div class="video-meta">
+        <h2 id="title"></h2>
+        <p class="uploader" id="uploader"></p>
+      </div>
+    </div>
+
+    <div class="dl-row">
+      <select id="res-select">
+        <option value="best">最高画質（自動）</option>
+      </select>
+      <button class="btn btn-red" id="dl-btn" onclick="startDownload()">ダウンロード</button>
+    </div>
+
+    <div id="progress-wrap" class="progress-wrap hidden">
+      <div class="progress-meta">
+        <span id="prog-pct">0%</span>
+        <span id="prog-speed"></span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="prog-fill" style="width:0%"></div>
+      </div>
+      <p class="status-text" id="status-text">ダウンロード中...</p>
+    </div>
+
+    <div id="success-banner" class="success-banner hidden">✓ ダウンロード完了！</div>
+    <div id="dl-error" class="error-text hidden"></div>
+  </div>
+
+  <!-- Cookie管理（Bot判定時のみ表示） -->
+  <div class="card cookie-card hidden" id="cookie-card">
+    <div class="cookie-header">
+      <span class="cookie-title">🍪 Cookie設定</span>
+    </div>
+    <p class="cookie-desc">
+      YouTubeのBot判定に引っかかりました。ブラウザから書き出した cookies.txt をアップロードしてください。
+    </p>
+    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('cookie-input').click()">
+      cookies.txt をドラッグ＆ドロップ、またはクリックして選択
+      <input type="file" id="cookie-input" accept=".txt" style="display:none" onchange="uploadCookies(this.files[0])">
+    </div>
+    <div id="cookie-msg" class="cookie-msg hidden"></div>
+  </div>
+
+</div>
+
+<script>
+  let currentUrl = '';
+  let pollTimer = null;
+
+  document.getElementById('url-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !document.getElementById('fetch-btn').disabled) fetchInfo();
+  });
+
+  async function fetchInfo() {
+    const url = document.getElementById('url-input').value.trim();
+    if (!url) return setFetchError('URLを入力してください');
+
+    clearFetchError();
+    const btn = document.getElementById('fetch-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>取得中...';
+
+    document.getElementById('video-card').classList.add('hidden');
+    document.getElementById('success-banner').classList.add('hidden');
+    document.getElementById('progress-wrap').classList.add('hidden');
+
+    try {
+      const res = await fetch('/api/info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+      if (data.error === 'BOT_DETECTION') { setFetchError('YouTubeのBot判定に引っかかりました。下のCookie設定をしてください。'); showBotAlert(); return; }
+      if (data.error) return setFetchError(data.error);
+
+      currentUrl = url;
+      document.getElementById('thumbnail').src = data.thumbnail;
+      document.getElementById('title').textContent = data.title;
+      document.getElementById('uploader').textContent = data.uploader;
+      document.getElementById('duration').textContent = data.duration;
+
+      const sel = document.getElementById('res-select');
+      sel.innerHTML = '<option value="best">最高画質（自動）</option>';
+      for (const h of data.resolutions) {
+        const opt = document.createElement('option');
+        opt.value = String(h);
+        opt.textContent = h >= 2160 ? `${h}p（4K）` : `${h}p`;
+        sel.appendChild(opt);
+      }
+
+      document.getElementById('video-card').classList.remove('hidden');
+
+    } catch {
+      setFetchError('通信エラーが発生しました');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '情報取得';
+    }
+  }
+
+  async function startDownload() {
+    const quality = document.getElementById('res-select').value;
+    const btn = document.getElementById('dl-btn');
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>処理中...';
+    document.getElementById('progress-wrap').classList.remove('hidden');
+    document.getElementById('success-banner').classList.add('hidden');
+    document.getElementById('dl-error').classList.add('hidden');
+    setProgress(0, '', '順番待ち...');
+
+    try {
+      const res = await fetch('/api/download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: currentUrl, quality }),
+      });
+      const data = await res.json();
+      if (data.error) return setDlError(data.error);
+      pollProgress(data.job_id, btn);
+
+    } catch {
+      setDlError('通信エラーが発生しました');
+      btn.disabled = false;
+      btn.textContent = 'ダウンロード';
+    }
+  }
+
+  function pollProgress(jobId, btn) {
+    clearInterval(pollTimer);
+    pollTimer = setInterval(async () => {
+      try {
+        const res = await fetch('/api/progress/' + jobId);
+        const d = await res.json();
+
+        if (d.status === 'queued') {
+          setProgress(0, '', '順番待ち...');
+
+        } else if (d.status === 'downloading') {
+          setProgress(d.progress, d.speed, `ダウンロード中... ${d.eta ? '残り ' + d.eta : ''}`);
+
+        } else if (d.status === 'done') {
+          clearInterval(pollTimer);
+          setProgress(100, '', '完了！');
+          const a = document.createElement('a');
+          a.href = '/api/file/' + jobId;
+          a.click();
+          document.getElementById('success-banner').classList.remove('hidden');
+          btn.disabled = false;
+          btn.textContent = 'ダウンロード';
+
+        } else if (d.status === 'error') {
+          clearInterval(pollTimer);
+          if (d.bot_error) { setDlError('YouTubeのBot判定に引っかかりました。下のCookie設定をしてください。'); showBotAlert(); }
+          else { setDlError('エラー: ' + d.error); }
+          document.getElementById('progress-wrap').classList.add('hidden');
+          btn.disabled = false;
+          btn.textContent = 'ダウンロード';
+        }
+      } catch { /* ポーリング中の一時的なエラーは無視 */ }
+    }, 800);
+  }
+
+  function setProgress(pct, speed, status) {
+    document.getElementById('prog-fill').style.width = pct + '%';
+    document.getElementById('prog-pct').textContent = pct + '%';
+    document.getElementById('prog-speed').textContent = speed;
+    document.getElementById('status-text').textContent = status;
+  }
+
+  function setFetchError(msg) {
+    const el = document.getElementById('fetch-error');
+    el.textContent = msg;
+    el.classList.remove('hidden');
+  }
+
+  function clearFetchError() {
+    document.getElementById('fetch-error').classList.add('hidden');
+  }
+
+  function setDlError(msg) {
+    const el = document.getElementById('dl-error');
+    el.textContent = msg;
+    el.classList.remove('hidden');
+  }
+
+  async function uploadCookies(file) {
+    if (!file) return;
+    const form = new FormData();
+    form.append('file', file);
+    const msg = document.getElementById('cookie-msg');
+    msg.textContent = 'アップロード中...';
+    msg.style.color = '#888';
+    msg.classList.remove('hidden');
+    try {
+      const res = await fetch('/api/cookies', { method: 'POST', body: form });
+      const d = await res.json();
+      if (d.ok) {
+        msg.textContent = '✓ Cookieを設定しました。再度お試しください。';
+        msg.style.color = '#2e7d32';
+      } else {
+        msg.textContent = 'エラー: ' + (d.error || '不明');
+        msg.style.color = '#c00';
+      }
+    } catch {
+      msg.textContent = '通信エラーが発生しました';
+      msg.style.color = '#c00';
+    }
+  }
+
+  function showBotAlert() {
+    const card = document.getElementById('cookie-card');
+    card.classList.remove('hidden');
+    card.classList.add('alert');
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => card.classList.remove('alert'), 1000);
+  }
+
+  const dropZone = document.getElementById('drop-zone');
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) uploadCookies(file);
+  });
+</script>
+</body>
+</html>
