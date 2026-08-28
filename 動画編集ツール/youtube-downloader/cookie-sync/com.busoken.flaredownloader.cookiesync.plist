@@ -4,7 +4,7 @@
   配置先: ~/Library/LaunchAgents/com.busoken.flaredownloader.cookiesync.plist
   登録: launchctl load ~/Library/LaunchAgents/com.busoken.flaredownloader.cookiesync.plist
   解除: launchctl unload ~/Library/LaunchAgents/com.busoken.flaredownloader.cookiesync.plist
-  毎日AM6:00に sync_cookie.py を実行する設定。
+  毎日AM11:00に sync_cookie.py を実行する設定。
   詳細はREADME.mdを参照。
 -->
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -22,15 +22,15 @@
     <key>EnvironmentVariables</key>
     <dict>
         <key>CF_ACCOUNT_ID</key>
-        <string>REPLACE_WITH_ACCOUNT_ID</string>
+        <string>8b19ac744d3ed013c02acc920f658786</string>
         <key>CF_KV_NAMESPACE_ID</key>
-        <string>REPLACE_WITH_NAMESPACE_ID</string>
+        <string>6df3870d73ca4859894e5f5bf8fac8d5</string>
     </dict>
 
     <key>StartCalendarInterval</key>
     <dict>
         <key>Hour</key>
-        <integer>6</integer>
+        <integer>11</integer>
         <key>Minute</key>
         <integer>0</integer>
     </dict>

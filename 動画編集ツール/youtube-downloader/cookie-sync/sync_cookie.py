@@ -19,6 +19,22 @@ COOKIE_DOMAINS = ('youtube.com', 'google.com')
 # APIトークンはplist（他ユーザーからも読める権限になりがち）に平文で置かず、
 # パーミッション600のこのファイルから読む
 CF_API_TOKEN_PATH = os.path.expanduser('~/.flare_downloader_cf_token')
+# Slack Webhook URLも同様にパーミッション600のファイルから読む
+SLACK_WEBHOOK_PATH = os.path.expanduser('~/.flare_downloader_slack_webhook')
+
+
+def _notify_slack_failure(reason):
+    """失敗時にSlackへ通知する。通知自体の失敗は元のエラーを握りつぶさないよう静かにログするだけに留める"""
+    try:
+        if not os.path.isfile(SLACK_WEBHOOK_PATH):
+            print(f'[sync_cookie] {SLACK_WEBHOOK_PATH} が見つからないためSlack通知をスキップします')
+            return
+        with open(SLACK_WEBHOOK_PATH, 'r', encoding='utf-8') as f:
+            webhook_url = f.read().strip()
+        text = f'Flare Downloader Cookie同期に失敗しました\n{reason}'
+        requests.post(webhook_url, json={'text': text}, timeout=10)
+    except Exception as e:
+        print(f'[sync_cookie] Slack通知の送信に失敗しました: {e}')
 
 
 def _read_api_token():
@@ -71,29 +87,39 @@ def main():
     required_env = ('CF_ACCOUNT_ID', 'CF_KV_NAMESPACE_ID')
     missing = [name for name in required_env if not os.environ.get(name)]
     if missing:
-        print(f'[sync_cookie] 環境変数が未設定です: {", ".join(missing)}')
+        reason = f'環境変数が未設定です: {", ".join(missing)}'
+        print(f'[sync_cookie] {reason}')
+        _notify_slack_failure(reason)
         sys.exit(1)
 
     try:
         content = _extract_netscape_cookies()
     except Exception as e:
-        print(f'[sync_cookie] Cookie抽出に失敗しました: {e}')
+        reason = f'Cookie抽出に失敗しました: {e}'
+        print(f'[sync_cookie] {reason}')
+        _notify_slack_failure(reason)
         sys.exit(1)
 
     if not content.strip():
-        print('[sync_cookie] Cookieが取得できませんでした（Chromeで一度YouTubeにログインしてください）')
+        reason = 'Cookieが取得できませんでした（Chromeで一度YouTubeにログインしてください）'
+        print(f'[sync_cookie] {reason}')
+        _notify_slack_failure(reason)
         sys.exit(1)
 
     try:
         result = _push_to_kv(content)
     except Exception as e:
-        print(f'[sync_cookie] KVへの書き込みに失敗しました: {e}')
+        reason = f'KVへの書き込みに失敗しました: {e}'
+        print(f'[sync_cookie] {reason}')
+        _notify_slack_failure(reason)
         sys.exit(1)
 
     if result.get('success'):
         print('[sync_cookie] Cookieの同期に成功しました')
     else:
-        print(f'[sync_cookie] KV APIがエラーを返しました: {result}')
+        reason = f'KV APIがエラーを返しました: {result}'
+        print(f'[sync_cookie] {reason}')
+        _notify_slack_failure(reason)
         sys.exit(1)
 
 
