@@ -10,6 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from datetime import datetime, timezone
 
+import requests
 from flask import Flask, render_template, request, jsonify, send_file, after_this_request
 
 app = Flask(__name__)
@@ -79,16 +80,57 @@ def _user_id_from_email(email):
     return hashlib.sha256(email.encode('utf-8')).hexdigest()[:16]
 
 
-def _shared_cookie_from_request():
-    return request.headers.get('X-Shared-Cookie', '')
+SHARED_COOKIE_KV_KEY = 'shared_cookie'
+SHARED_COOKIE_CACHE_TTL_SECONDS = 5 * 60  # ダウンロードのたびにCloudflare APIを叩かないようにキャッシュする
+
+_shared_cookie_cache = {'value': '', 'fetched_at': 0.0}
+_shared_cookie_cache_lock = threading.Lock()
+
+
+def _fetch_shared_cookie_from_kv():
+    account_id = os.environ.get('CF_ACCOUNT_ID')
+    namespace_id = os.environ.get('CF_KV_NAMESPACE_ID')
+    api_token = os.environ.get('CF_API_TOKEN')
+    if not (account_id and namespace_id and api_token):
+        return ''
+
+    url = (
+        f'https://api.cloudflare.com/client/v4/accounts/{account_id}'
+        f'/storage/kv/namespaces/{namespace_id}/values/{SHARED_COOKIE_KV_KEY}'
+    )
+    try:
+        res = requests.get(url, headers={'Authorization': f'Bearer {api_token}'}, timeout=10)
+        res.raise_for_status()
+        return res.text
+    except Exception as e:
+        # KV取得失敗でもダウンロード機能全体は止めない(Cookie無しで継続)
+        print(f'[shared_cookie] KVからの取得に失敗しました: {e}')
+        return ''
+
+
+def _get_shared_cookie():
+    """Cloudflare KVから共有Cookieを取得する。直近の取得結果を5分間キャッシュし、
+    ダウンロードのたびにCloudflare APIを叩かないようにする(マルチスレッド動作のためLockで保護)。
+    """
+    now = time.time()
+    with _shared_cookie_cache_lock:
+        if now - _shared_cookie_cache['fetched_at'] < SHARED_COOKIE_CACHE_TTL_SECONDS:
+            return _shared_cookie_cache['value']
+
+    value = _fetch_shared_cookie_from_kv()
+
+    with _shared_cookie_cache_lock:
+        _shared_cookie_cache['value'] = value
+        _shared_cookie_cache['fetched_at'] = now
+    return value
 
 
 @contextmanager
 def _cookie_file_from_header():
-    """X-Shared-Cookieヘッダーの内容をリクエストごとの一時ファイルに書き出す。
-    ヘッダーが空/未設定ならNoneを返し、Cookie無しでyt-dlpを実行させる。
+    """共有Cookieの内容をリクエストごとの一時ファイルに書き出す。
+    Cookieが空/未取得ならNoneを返し、Cookie無しでyt-dlpを実行させる。
     """
-    cookie_content = _shared_cookie_from_request()
+    cookie_content = _get_shared_cookie()
     if not cookie_content:
         yield None
         return
@@ -278,7 +320,7 @@ def start_download():
 
     # _do_downloadはリクエストコンテキスト外のスレッドで動くため、
     # Cookie内容はここ(リクエストコンテキスト内)で読み取って渡す
-    cookie_content = _shared_cookie_from_request()
+    cookie_content = _get_shared_cookie()
     executor.submit(_do_download, job_id, url, height, weight, user_id, cookie_content)
 
     return jsonify({'job_id': job_id})

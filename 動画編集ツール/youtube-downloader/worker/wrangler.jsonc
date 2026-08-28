@@ -17,14 +17,7 @@
 		"CF_ACCESS_TEAM_DOMAIN": "busokenyttm",
 		// Access Applicationの「Application Audience (AUD) Tag」（Detailsタブ→Additional settingsで確認できる）
 		"CF_ACCESS_AUD": "f5719dfd392c07feb73b400b4a711d021b6964edd988e1edf4d676dd5184c519"
-	},
-	"kv_namespaces": [
-		{
-			// 伏見さん本人のYouTube Cookieを共有保存するKV。idは `wrangler kv namespace create` 実行後に実IDへ差し替える
-			"binding": "SHARED_COOKIE_KV",
-			"id": "6df3870d73ca4859894e5f5bf8fac8d5"
-		}
-	]
+	}
 	/**
 	 * Secrets
 	 * WORKER_SHARED_SECRET は `wrangler secret put WORKER_SHARED_SECRET` で設定する（ここには書かない）

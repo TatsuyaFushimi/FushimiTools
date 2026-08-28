@@ -5,13 +5,11 @@ export interface Env {
 	WORKER_SHARED_SECRET: string;
 	CF_ACCESS_TEAM_DOMAIN: string;
 	CF_ACCESS_AUD: string;
-	SHARED_COOKIE_KV: KVNamespace;
 }
 
 const HEALTH_PATH = '/health';
 const ACCESS_EMAIL_HEADER = 'Cf-Access-Authenticated-User-Email';
 const ACCESS_JWT_HEADER = 'Cf-Access-Jwt-Assertion';
-const SHARED_COOKIE_KV_KEY = 'shared_cookie';
 
 // バックエンドのレスポンスをそのまま転送すると、Cloudflareの自動decompressで
 // Content-Lengthと実body長が食い違い、動画ファイルが壊れることがあるため除外する
@@ -66,16 +64,6 @@ export default {
 		const headers = new Headers(request.headers);
 		headers.set('X-User-Email', userEmail);
 		headers.set('X-Worker-Secret', env.WORKER_SHARED_SECRET);
-
-		// KVに未設定 or KV障害時はヘッダーを付けずそのまま転送する（バックエンド側でCookie未設定を検知する）
-		try {
-			const sharedCookie = await env.SHARED_COOKIE_KV.get(SHARED_COOKIE_KV_KEY);
-			if (sharedCookie) {
-				headers.set('X-Shared-Cookie', sharedCookie);
-			}
-		} catch {
-			// KV読み取り失敗でもダウンロード機能全体は止めない
-		}
 
 		const hasBody = request.method !== 'GET' && request.method !== 'HEAD';
 
