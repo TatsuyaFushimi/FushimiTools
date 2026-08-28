@@ -1,7 +1,11 @@
 FROM python:3.11-slim
 
-RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg curl unzip ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+
+# yt-dlpがYouTubeのJS認証チャレンジ（Bot判定回避）を解決するためにDenoランタイムを必要とする
+RUN curl -fsSL https://deno.land/install.sh | sh \
+    && ln -s /root/.deno/bin/deno /usr/local/bin/deno
 
 WORKDIR /app
 
